@@ -23,6 +23,8 @@ import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
 import keras.models as KM
+import pickle
+import sys
 
 from mrcnn import utils
 
@@ -31,6 +33,7 @@ from distutils.version import LooseVersion
 assert LooseVersion(tf.__version__) >= LooseVersion("1.3")
 assert LooseVersion(keras.__version__) >= LooseVersion('2.0.8')
 
+verbose=0
 
 ############################################################
 #  Utility Functions
@@ -1216,7 +1219,10 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     """
     # Load image and mask
     image = dataset.load_image(image_id)
+    image = image.copy()
     mask, class_ids = dataset.load_mask(image_id)
+    mask = mask.copy()
+    class_ids = class_ids.copy()
     original_shape = image.shape
     image, window, scale, padding, crop = utils.resize_image(
         image,
@@ -1224,8 +1230,8 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
         min_scale=config.IMAGE_MIN_SCALE,
         max_dim=config.IMAGE_MAX_DIM,
         mode=config.IMAGE_RESIZE_MODE)
-    mask = utils.resize_mask(mask, scale, padding, crop)
 
+    mask = utils.resize_mask(mask, scale, padding, crop)
     # Random horizontal flips.
     # TODO: will be removed in a future update in favor of augmentation
     if augment:
@@ -1290,7 +1296,7 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     image_meta = compose_image_meta(image_id, original_shape, image.shape,
                                     window, scale, active_class_ids)
 
-    return image, image_meta, class_ids, bbox, mask
+    return image.astype(float), image_meta.astype(float), class_ids, bbox.astype(float), mask.astype(float)
 
 
 def build_detection_targets(rpn_rois, gt_class_ids, gt_boxes, gt_masks, config):
@@ -1313,45 +1319,66 @@ def build_detection_targets(rpn_rois, gt_class_ids, gt_boxes, gt_masks, config):
     masks: [TRAIN_ROIS_PER_IMAGE, height, width, NUM_CLASSES). Class specific masks cropped
            to bbox boundaries and resized to neural network output size.
     """
+    #print "In build_detection_targets,"
+    #print 'rpn_rois',rpn_rois.shape
+    #print 'gt_class_ids',gt_class_ids
+    #print 'gt_boxes',gt_boxes
+    #print 'gt_masks',np.sum(gt_masks.flatten()), gt_masks.shape
+    
+    rpn_rois=rpn_rois.astype(float)
+    gt_boxes=gt_boxes.astype(float)
     assert rpn_rois.shape[0] > 0
-    assert gt_class_ids.dtype == np.int32, "Expected int but got {}".format(
+    '''
+    assert (gt_class_ids.dtype == np.int32) or (gt_class_ids.dtype == np.int64), "Expected int but got {}".format(
         gt_class_ids.dtype)
-    assert gt_boxes.dtype == np.int32, "Expected int but got {}".format(
+    assert (gt_boxes.dtype == np.int32) or (gt_boxes.dtype == np.int64), "Expected int but got {}".format(
         gt_boxes.dtype)
-    assert gt_masks.dtype == np.bool_, "Expected bool but got {}".format(
+    assert (gt_masks.dtype == np.bool_) or (gt_masks.dtype == np.uint8), "Expected bool but got {}".format(
         gt_masks.dtype)
-
+    '''
     # It's common to add GT Boxes to ROIs but we don't do that here because
     # according to XinLei Chen's paper, it doesn't help.
 
     # Trim empty padding in gt_boxes and gt_masks parts
     instance_ids = np.where(gt_class_ids > 0)[0]
+    #print 'instance_ids', instance_ids
     assert instance_ids.shape[0] > 0, "Image must contain instances."
     gt_class_ids = gt_class_ids[instance_ids]
     gt_boxes = gt_boxes[instance_ids]
     gt_masks = gt_masks[:, :, instance_ids]
 
+    #print 'gt_class_ids',gt_class_ids
+    #print 'gt_boxes ',gt_boxes 
+    #for i in xrange(gt_masks.shape[-1]):
+        #print 'each mask sum',i,np.sum(gt_masks[:,:,i])
+    
+
     # Compute areas of ROIs and ground truth boxes.
     rpn_roi_area = (rpn_rois[:, 2] - rpn_rois[:, 0]) * \
         (rpn_rois[:, 3] - rpn_rois[:, 1])
+    #print 'rpn_roi_area', rpn_roi_area
     gt_box_area = (gt_boxes[:, 2] - gt_boxes[:, 0]) * \
         (gt_boxes[:, 3] - gt_boxes[:, 1])
-
+    #print 'gt_box_area', gt_box_area
     # Compute overlaps [rpn_rois, gt_boxes]
+    
     overlaps = np.zeros((rpn_rois.shape[0], gt_boxes.shape[0]))
     for i in range(overlaps.shape[1]):
         gt = gt_boxes[i]
+        gt = gt.astype(float)
+        #print 'gt type', gt.dtype
         overlaps[:, i] = utils.compute_iou(
             gt, rpn_rois, gt_box_area[i], rpn_roi_area)
-
+    #print 'in model, overlap',set(overlaps.flatten())
     # Assign ROIs to GT boxes
     rpn_roi_iou_argmax = np.argmax(overlaps, axis=1)
     rpn_roi_iou_max = overlaps[np.arange(
         overlaps.shape[0]), rpn_roi_iou_argmax]
     # GT box assigned to each ROI
     rpn_roi_gt_boxes = gt_boxes[rpn_roi_iou_argmax]
+    #print 'before', set(gt_class_ids.flatten())
     rpn_roi_gt_class_ids = gt_class_ids[rpn_roi_iou_argmax]
-
+    
     # Positive ROIs are those with >= 0.5 IoU with a GT box.
     fg_ids = np.where(rpn_roi_iou_max > 0.5)[0]
 
@@ -1401,12 +1428,16 @@ def build_detection_targets(rpn_rois, gt_class_ids, gt_boxes, gt_masks, config):
 
     # Reset the gt boxes assigned to BG ROIs.
     rpn_roi_gt_boxes[keep_bg_ids, :] = 0
+    #print 'rpn_roi_gt_class_ids',set(rpn_roi_gt_class_ids.flatten())
     rpn_roi_gt_class_ids[keep_bg_ids] = 0
-
+    #print 'rpn_roi_gt_class_ids',set(rpn_roi_gt_class_ids.flatten())
     # For each kept ROI, assign a class_id, and for FG ROIs also add bbox refinement.
     rois = rpn_rois[keep]
     roi_gt_boxes = rpn_roi_gt_boxes[keep]
+    #print 'rpn_roi_gt_class_ids',rpn_roi_gt_class_ids
     roi_gt_class_ids = rpn_roi_gt_class_ids[keep]
+    #print 'keep',keep
+    #print 'roi_gt_class_ids',roi_gt_class_ids
     roi_gt_assignment = rpn_roi_iou_argmax[keep]
 
     # Class-aware bbox deltas. [y, x, log(h), log(w)]
@@ -1446,7 +1477,7 @@ def build_detection_targets(rpn_rois, gt_class_ids, gt_boxes, gt_masks, config):
         m = class_mask[y1:y2, x1:x2]
         mask = skimage.transform.resize(m, config.MASK_SHAPE, order=1, mode="constant")
         masks[i, :, :, class_id] = mask
-
+    
     return rois, roi_gt_class_ids, bboxes, masks
 
 
@@ -1734,7 +1765,12 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                     rois, mrcnn_class_ids, mrcnn_bbox, mrcnn_mask =\
                         build_detection_targets(
                             rpn_rois, gt_class_ids, gt_boxes, gt_masks, config)
-
+                    
+                    #print 'In data_generator()'
+                    #print mrcnn_class_ids
+                    #print np.sum(mrcnn_class_ids)
+                    #print gt_class_ids
+                    #print 'gt_masks',np.sum(gt_masks)
             # Init batch arrays
             if b == 0:
                 batch_image_meta = np.zeros(
@@ -1778,6 +1814,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
             batch_rpn_match[b] = rpn_match[:, np.newaxis]
             batch_rpn_bbox[b] = rpn_bbox
             batch_images[b] = mold_image(image.astype(np.float32), config)
+            #batch_images[b] = image.astype(np.float32)
             batch_gt_class_ids[b, :gt_class_ids.shape[0]] = gt_class_ids
             batch_gt_boxes[b, :gt_boxes.shape[0]] = gt_boxes
             batch_gt_masks[b, :, :, :gt_masks.shape[-1]] = gt_masks
@@ -1785,6 +1822,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                 batch_rpn_rois[b] = rpn_rois
                 if detection_targets:
                     batch_rois[b] = rois
+                    #print np.sum(mrcnn_class_ids)
                     batch_mrcnn_class_ids[b] = mrcnn_class_ids
                     batch_mrcnn_bbox[b] = mrcnn_bbox
                     batch_mrcnn_mask[b] = mrcnn_mask
@@ -1861,7 +1899,7 @@ class MaskRCNN():
 
         # Inputs
         input_image = KL.Input(
-            shape=[None, None, 3], name="input_image")
+            shape=[None, None, config.IMAGE_CHANNEL_NUMBER], name="input_image")
         input_image_meta = KL.Input(shape=[config.IMAGE_META_SIZE],
                                     name="input_image_meta")
         if mode == "training":
@@ -2095,8 +2133,8 @@ class MaskRCNN():
         checkpoints = sorted(checkpoints)
         if not checkpoints:
             import errno
-            raise FileNotFoundError(
-                errno.ENOENT, "Could not find weight files in {}".format(dir_name))
+            #raise FileNotFoundError(
+                #errno.ENOENT, "Could not find weight files in {}".format(dir_name))
         checkpoint = os.path.join(dir_name, checkpoints[-1])
         return checkpoint
 
@@ -2178,7 +2216,7 @@ class MaskRCNN():
             if layer.output in self.keras_model.losses:
                 continue
             loss = (
-                tf.reduce_mean(layer.output, keepdims=True)
+                tf.reduce_mean(layer.output, keep_dims=True)
                 * self.config.LOSS_WEIGHTS.get(name, 1.))
             self.keras_model.add_loss(loss)
 
@@ -2202,7 +2240,7 @@ class MaskRCNN():
             layer = self.keras_model.get_layer(name)
             self.keras_model.metrics_names.append(name)
             loss = (
-                tf.reduce_mean(layer.output, keepdims=True)
+                tf.reduce_mean(layer.output, keep_dims=True)
                 * self.config.LOSS_WEIGHTS.get(name, 1.))
             self.keras_model.metrics_tensors.append(loss)
 
@@ -2232,7 +2270,7 @@ class MaskRCNN():
             if not layer.weights:
                 continue
             # Is it trainable?
-            trainable = bool(re.fullmatch(layer_regex, layer.name))
+            trainable = bool(re.match(layer_regex, layer.name))
             # Update layer. If layer is a container, update inner layer.
             if layer.__class__.__name__ == 'TimeDistributed':
                 layer.layer.trainable = trainable
@@ -2290,7 +2328,7 @@ class MaskRCNN():
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
         epochs: Number of training epochs. Note that previous training epochs
-                are considered to be done alreay, so this actually determines
+                are considered to be done already, so this actually determines
                 the epochs to train in total rather than in this particaular
                 call.
         layers: Allows selecting wich layers to train. It can be:
@@ -2331,6 +2369,7 @@ class MaskRCNN():
             # All layers
             "all": ".*",
         }
+
         if layers in layer_regex.keys():
             layers = layer_regex[layers]
 
@@ -2345,7 +2384,7 @@ class MaskRCNN():
         # Callbacks
         callbacks = [
             keras.callbacks.TensorBoard(log_dir=self.log_dir,
-                                        histogram_freq=0, write_graph=True, write_images=False),
+                                        histogram_freq=0, write_graph=False, write_images=True),
             keras.callbacks.ModelCheckpoint(self.checkpoint_path,
                                             verbose=0, save_weights_only=True),
         ]
@@ -2367,8 +2406,9 @@ class MaskRCNN():
             workers = 0
         else:
             workers = multiprocessing.cpu_count()
-
-        self.keras_model.fit_generator(
+            
+        workers=0
+        history=self.keras_model.fit_generator(
             train_generator,
             initial_epoch=self.epoch,
             epochs=epochs,
@@ -2378,8 +2418,15 @@ class MaskRCNN():
             validation_steps=self.config.VALIDATION_STEPS,
             max_queue_size=100,
             workers=workers,
-            use_multiprocessing=True,
+            use_multiprocessing=False,
+            shuffle = True
         )
+        '''
+        with open('/data/dayajun/sw/Mask_RCNN/samples/shapes/trainHistoryDict%s.pkl'%title_, 'wb') as file_pi:
+            pickle.dump(history.history, file_pi)
+        print layers
+        print ">>>>>>>>>>>>>.."
+        '''
         self.epoch = max(self.epoch, epochs)
 
     def mold_inputs(self, images):
@@ -2644,7 +2691,7 @@ class MaskRCNN():
         for p in parents:
             if p in checked:
                 continue
-            if bool(re.fullmatch(name, p.name)):
+            if bool(re.match(name, p.name)):
                 return p
             checked.append(p)
             a = self.ancestor(p, name, checked)

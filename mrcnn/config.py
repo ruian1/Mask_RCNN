@@ -130,7 +130,8 @@ class Config(object):
     IMAGE_MIN_SCALE = 0
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    #MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    MEAN_PIXEL = np.array([123.7])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
@@ -210,9 +211,9 @@ class Config(object):
 
         # Input image size
         if self.IMAGE_RESIZE_MODE == "crop":
-            self.IMAGE_SHAPE = np.array([self.IMAGE_MIN_DIM, self.IMAGE_MIN_DIM, 3])
+            self.IMAGE_SHAPE = np.array([self.IMAGE_MIN_DIM, self.IMAGE_MIN_DIM,self.IMAGE_CHANNEL_NUMBER])
         else:
-            self.IMAGE_SHAPE = np.array([self.IMAGE_MAX_DIM, self.IMAGE_MAX_DIM, 3])
+            self.IMAGE_SHAPE = np.array([self.IMAGE_MAX_DIM, self.IMAGE_MAX_DIM,self.IMAGE_CHANNEL_NUMBER])
 
         # Image meta data length
         # See compose_image_meta() for details

@@ -63,7 +63,7 @@ def random_colors(N, bright=True):
     convert to RGB.
     """
     brightness = 1.0 if bright else 0.7
-    hsv = [(i / N, 1, brightness) for i in range(N)]
+    hsv = [(float(i) / N, 1, brightness) for i in range(N)]
     colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
     random.shuffle(colors)
     return colors
@@ -72,11 +72,28 @@ def random_colors(N, bright=True):
 def apply_mask(image, mask, color, alpha=0.5):
     """Apply the given mask to the image.
     """
+    """
     for c in range(3):
         image[:, :, c] = np.where(mask == 1,
                                   image[:, :, c] *
                                   (1 - alpha) + alpha * color[c] * 255,
                                   image[:, :, c])
+    print 'image shape',image.shape
+    print 'mask shape',mask.shape
+    """
+    #print image.shape
+    #print mask.shape
+    if len(image.shape)==3:
+        image[:, :, 0] = np.where(mask == 1,
+                                  image[:, :,0] *
+                                  (1 - alpha) + alpha * 255,
+                                  image[:, :,0])
+
+    if len(image.shape)==2:
+        image[:, :] = np.where(mask == 1,
+                               image[:, :] *
+                               (1 - alpha) + alpha * 255,
+                               image[:, :])
     return image
 
 
@@ -117,7 +134,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     height, width = image.shape[:2]
     ax.set_ylim(height + 10, -10)
     ax.set_xlim(-10, width + 10)
-    ax.axis('off')
+    #ax.axis('off')
     ax.set_title(title)
 
     masked_image = image.astype(np.uint32).copy()
@@ -132,7 +149,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         if show_bbox:
             p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=2,
                                 alpha=0.7, linestyle="dashed",
-                                edgecolor=color, facecolor='none')
+                                edgecolor='white', facecolor='none')
             ax.add_patch(p)
 
         # Label
@@ -151,7 +168,6 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         mask = masks[:, :, i]
         if show_mask:
             masked_image = apply_mask(masked_image, mask, color)
-
         # Mask Polygon
         # Pad to ensure proper polygons for masks that touch image edges.
         padded_mask = np.zeros(
@@ -163,7 +179,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
-    ax.imshow(masked_image.astype(np.uint8))
+    #ax.imshow(masked_image.astype(np.uint8))
+    ax.imshow(masked_image[:,:,0])
     if auto_show:
         plt.show()
 
@@ -256,6 +273,7 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
             # Mask
             m = utils.unmold_mask(mask[id], rois[id]
                                   [:4].astype(np.int32), image.shape)
+            print 'in vis,', masked_image.shape
             masked_image = apply_mask(masked_image, m, color)
 
     ax.imshow(masked_image)
@@ -457,7 +475,11 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                 verts = np.fliplr(verts) - 1
                 p = Polygon(verts, facecolor="none", edgecolor=color)
                 ax.add_patch(p)
-    ax.imshow(masked_image.astype(np.uint8))
+    if masked_image.shape[-1]==3:
+        ax.imshow(masked_image.astype(np.uint8))
+    if masked_image.shape[-1]==1:
+        ax.imshow(masked_image.reshape(512,512).astype(np.uint8))                
+    #ax.imshow(masked_image.astype(np.uint8))
 
 
 def display_table(table):

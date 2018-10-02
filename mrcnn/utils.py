@@ -67,13 +67,24 @@ def compute_iou(box, boxes, box_area, boxes_area):
     efficiency. Calculate once in the caller to avoid duplicate work.
     """
     # Calculate intersection areas
+    #print 'box,',box.dtype
+    #print 'boxes,',boxes.dtype
+    #print 'box_area',box_area.dtype
+    #print 'boxes_area',boxes_area.dtype
+    box.astype(float)
+    boxes.astype(float)
+    box_area.astype(float)
+    boxes_area.astype(float)
     y1 = np.maximum(box[0], boxes[:, 0])
     y2 = np.minimum(box[2], boxes[:, 2])
     x1 = np.maximum(box[1], boxes[:, 1])
     x2 = np.minimum(box[3], boxes[:, 3])
     intersection = np.maximum(x2 - x1, 0) * np.maximum(y2 - y1, 0)
     union = box_area + boxes_area[:] - intersection[:]
+    #print 'in utils, intersection,',set(intersection.flatten())
+    #print 'in utils, union',set(union.flatten())
     iou = intersection / union
+    #print 'in utils, iou', set(iou.flatten())
     return iou
 
 
@@ -105,6 +116,9 @@ def compute_overlaps_masks(masks1, masks2):
     if masks1.shape[0] == 0 or masks2.shape[0] == 0:
         return np.zeros((masks1.shape[0], masks2.shape[-1]))
     # flatten masks and compute their areas
+    print masks1.shape
+    print masks2.shape
+
     masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
     masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
     area1 = np.sum(masks1, axis=0)
@@ -304,7 +318,8 @@ class Dataset(object):
         # Build (or rebuild) everything else from the info dicts.
         self.num_classes = len(self.class_info)
         self.class_ids = np.arange(self.num_classes)
-        self.class_names = [clean_name(c["name"]) for c in self.class_info]
+        #self.class_names = [clean_name(c["name"]) for c in self.class_info]
+        self.class_names = [c["name"] for c in self.class_info]
         self.num_images = len(self.image_info)
         self._image_ids = np.arange(self.num_images)
 
@@ -434,7 +449,6 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
     scale = 1
     padding = [(0, 0), (0, 0), (0, 0)]
     crop = None
-
     if mode == "none":
         return image, window, scale, padding, crop
 
@@ -872,6 +886,8 @@ def norm_boxes(boxes, shape):
         [N, (y1, x1, y2, x2)] in normalized coordinates
     """
     h, w = shape
+    h=float(h)
+    w=float(w)
     scale = np.array([h - 1, w - 1, h - 1, w - 1])
     shift = np.array([0, 0, 1, 1])
     return np.divide((boxes - shift), scale).astype(np.float32)
