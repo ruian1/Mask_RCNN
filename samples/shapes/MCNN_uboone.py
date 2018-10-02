@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 import sys
 import random
 import math
@@ -59,7 +59,7 @@ class ShapesConfig(Config):
     # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
     # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
     GPU_COUNT = 1
-    IMAGES_PER_GPU = 5
+    IMAGES_PER_GPU = 3
     
     BACKBONE_STRIDES = [4, 8, 16, 32, 64, 128, 256]
     
@@ -72,23 +72,32 @@ class ShapesConfig(Config):
     IMAGE_MAX_DIM = 512
 
     # Use smaller anchors because our image and objects are small
-    RPN_ANCHOR_RATIOS = [0.5,  1,  2,  4,   8,  16, 32]
-    RPN_ANCHOR_SCALES = (8  , 16, 32, 64, 128, 256, 512)  # anchor side in pixels
+    #RPN_ANCHOR_RATIOS = [0.125,0.5,  1,  2,  4]
+    RPN_ANCHOR_RATIOS = [0.5,1,2]
+    RPN_ANCHOR_SCALES = (   8,  16, 32, 64, 128, 256)  # anchor side in pixels
 
     # Reduce training ROIs per image because the images are small and have
     # few objects. Aim to allow ROI sampling to pick 33% positive ROIs.
-    TRAIN_ROIS_PER_IMAGE = 200
+    TRAIN_ROIS_PER_IMAGE = 100
 
     # Use a small epoch since the data is simple
-    STEPS_PER_EPOCH = 1000
+    STEPS_PER_EPOCH = 50
 
     # use small validation steps since the epoch is small
     VALIDATION_STEPS = 10
     
     DETECTION_MAX_INSTANCES = 20
     
-    USE_MINI_MASK = True
-    MINI_MASK_SHAPE = (128, 128)  # (height, width) of the mini-mask
+    USE_MINI_MASK = False
+    #MINI_MASK_SHAPE = (128, 128)  # (height, width) of the mini-mask
+
+    IMAGE_CHANNEL_NUMBER =1
+
+    IMAGE_RESIZE_MODE = 'none'
+
+    Train_BN=False
+
+    MEAN_PIXEL = np.array([0.001])
 
 def get_ax(rows=1, cols=1, size=8):
     _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
@@ -129,6 +138,7 @@ class ShapesDataset(utils.Dataset):
                 
             for j, roi in enumerate(self.ev_roi.ROIArray()):
                 if j==0 : continue # First ROI name null with producer of iseg
+                if roi.PdgCode()==16: continue #nu_tau
                 if roi.PdgCode()==111: continue #pi_zero...
                 if roi.PdgCode()==321: continue #Kplus...
                 if roi.PdgCode()==2112: continue #Delta...
@@ -138,17 +148,17 @@ class ShapesDataset(utils.Dataset):
                 if roi.PdgCode()==1000020030: continue #Alpha...                
                 if roi.PdgCode()==1000020040: continue #Alpha... 
 
-
                 pdgs.append(roi.PdgCode())
-            self.add_image("Particles", image_id=i, path=None,
-                           width=width, height=height,
-                           bg_color=0, pdgs=pdgs)
+            if len(pdgs):
+                self.add_image("Particles", image_id=i, path=None,
+                               width=width, height=height,
+                               bg_color=0, pdgs=pdgs)
     
     def load_this_entry(self, entry):
         if(verbose): sys.stdout.write("%s, %i \n"%('>>>>counter', self.counter))
         #print '>>>>counter>>',self.counter
         self.counter+=1
-        self.iom.read_entry(entry)
+        self.iom.read_entry(entry, True)
         self.ev_image    = self.iom.get_data(larcv.kProductImage2D,"wire")
         self.ev_roi      = self.iom.get_data(larcv.kProductROI,"iseg")
         self.ev_instance = self.iom.get_data(larcv.kProductImage2D,"segment")
@@ -167,13 +177,16 @@ class ShapesDataset(utils.Dataset):
         image,_,_ = self.load_this_entry(image_id)
         img_np_=larcv.as_ndarray(image)
         #print 'before thresholding, sum is ', np.sum(img_np_)
+        #print img_np_[100,:]
         image.threshold(10,0) #thershold value here 
         img_np=larcv.as_ndarray(image)
         #print 'after thresholding, sum is ', np.sum(img_np_)
+        #print image_np[100,:]
         img_np=img_np.reshape(512,512,1)
-        img_np3=np.repeat(img_np,3).reshape(512,512,3)
-        img_np3=np.round(img_np3,0)
-        return img_np3
+        return img_np.copy()
+        #img_np3=np.repeat(img_np,3).reshape(512,512,3)
+        #img_np3=np.round(img_np3,0)
+        #return img_np3
 
     def image_reference(self, image_id):
         info = self.image_info[image_id]
@@ -193,7 +206,7 @@ class ShapesDataset(utils.Dataset):
         #print '>>>>load_this_entry in load_mask'
         if(verbose): sys.stdout.flush()
         image,img_mask,_ = self.load_this_entry(image_id)
-        image.binary_threshold(0,0,1)
+        image.binary_threshold(10,0,1)
         img_ori_np = larcv.as_ndarray(image)
         #print 'img_ori_np shape', img_ori_np.shape
         y = set(img_ori_np.flatten())
@@ -217,7 +230,7 @@ class ShapesDataset(utils.Dataset):
             mask[:, :, i] = mask[:, :, i] * occlusion
             occlusion = np.logical_and(occlusion, np.logical_not(mask[:, :, i]))
         class_ids = np.array([self.class_names.index(s) for s in pdgs])
-        return mask, class_ids
+        return mask.copy(), class_ids
 
 if __name__=="__main__":
 
@@ -225,35 +238,72 @@ if __name__=="__main__":
     config.display()
 
     dataset_train = ShapesDataset("/data/dayajun/toymodel/uboone/train_data/75_200.root")
-    dataset_train.load_shapes(100, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+    dataset_train.load_shapes(10000, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_train.prepare()
     
     dataset_val = ShapesDataset("/data/dayajun/toymodel/uboone/train_data/75_200_val.root")
-    dataset_val.load_shapes(20, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+    dataset_val.load_shapes(1000, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_val.prepare()
     
     # Create model in training mode
     model = modellib.MaskRCNN(mode="training", config=config,
                               model_dir=MODEL_DIR)
+    """
+    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
-    print sys.argv[1]
-    print sys.argv[1]=='heads'
+    model.load_weights(COCO_MODEL_PATH, by_name=True,
+                       exclude=["conv1","mrcnn_class_logits", "mrcnn_bbox_fc", 
+                                "mrcnn_bbox", "mrcnn_mask"])
+    """
+
+    if sys.argv[1]=='test':
+        class InferenceConfig(ShapesConfig):
+            GPU_COUNT = 1
+            IMAGES_PER_GPU = 1
+        inference_config = InferenceConfig()
+
+        image_id=2
+        print 'image_id ',image_id
+        original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+            modellib.load_image_gt(dataset_train, inference_config, 
+                                   image_id, use_mini_mask=False)
+
+        print np.sum(original_image)
+    
+
     if sys.argv[1]=='heads':
         print "...............Start Training I"
-    
         model.train(dataset_train, dataset_val, 
                     learning_rate=config.LEARNING_RATE, 
-                    epochs=20, 
+                    epochs=10, 
                     layers='heads')
 
     if sys.argv[1]=='all':
         print "...............Start Training II"
-        model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20180920T1657/mask_rcnn_particles_0020.h5"
+        model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20181001T1620/mask_rcnn_particles_0100.h5"
         model.load_weights(model_path, by_name=True)
         model.train(dataset_train, dataset_val, 
                     learning_rate=config.LEARNING_RATE / 10,
-                    epochs=30, 
+                    epochs=200, 
                     layers="all")
 
+    if sys.argv[1]=='heads_all':
+        print "...............Start Training I"
+        #model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20180927T1747/mask_rcnn_particles_0050.h5"
+        model_path=''
+        if model_path:
+            model.load_weights(model_path, by_name=True)
+        #'''
+        model.train(dataset_train, dataset_val, 
+                    learning_rate=config.LEARNING_RATE, 
+                    epochs=50, 
+                    layers='heads')
+        #'''
+        print "...............Start Training II"
+        model.train(dataset_train, dataset_val, 
+                    learning_rate=config.LEARNING_RATE / 10,
+                    epochs=100, 
+                    layers="all")
+        
     print "Training Done!"
 
