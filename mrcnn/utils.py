@@ -116,8 +116,8 @@ def compute_overlaps_masks(masks1, masks2):
     if masks1.shape[0] == 0 or masks2.shape[0] == 0:
         return np.zeros((masks1.shape[0], masks2.shape[-1]))
     # flatten masks and compute their areas
-    print masks1.shape
-    print masks2.shape
+    #print masks1.shape
+    #print masks2.shape
 
     masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
     masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
@@ -808,12 +808,13 @@ def compute_recall(pred_boxes, gt_boxes, iou):
     """
     # Measure overlaps
     overlaps = compute_overlaps(pred_boxes, gt_boxes)
+    #print overlaps
     iou_max = np.max(overlaps, axis=1)
     iou_argmax = np.argmax(overlaps, axis=1)
     positive_ids = np.where(iou_max >= iou)[0]
     matched_gt_boxes = iou_argmax[positive_ids]
-
-    recall = len(set(matched_gt_boxes)) / gt_boxes.shape[0]
+    
+    recall = float(len(set(matched_gt_boxes))) / gt_boxes.shape[0]
     return recall, positive_ids
 
 
