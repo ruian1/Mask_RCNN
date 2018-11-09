@@ -28,6 +28,13 @@ import mrcnn.model as modellib
 from mrcnn import visualize
 from mrcnn.model import log
 
+
+path_train=sys.argv[2]
+path_val=sys.argv[3]
+path_model=""
+if len(sys.argv) == 5:
+    path_model=sys.argv[4]
+
 #from lib.config import config_loader
 #CFG=sys.argv[1]
 #cfg=config_loader(CFG)
@@ -318,11 +325,11 @@ if __name__=="__main__":
     config = UbooneConfig()
     config.display()
 
-    dataset_train = UbooneDataset("/data/dayajun/toymodel/uboone/train_data/75_200.root")
+    dataset_train = UbooneDataset(path_train)
     dataset_train.load_events(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_train.prepare()
     
-    dataset_val = UbooneDataset("/data/dayajun/toymodel/uboone/train_data/75_200_val.root")
+    dataset_val = UbooneDataset(path_val)
     dataset_val.load_events(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_val.prepare()
     
@@ -361,7 +368,7 @@ if __name__=="__main__":
 
     if sys.argv[1]=='all':
         print "...............Start Training II"
-        model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20181001T1620/mask_rcnn_particles_0100.h5"
+        model_path=path_model
         model.load_weights(model_path, by_name=True)
         model.train(dataset_train, dataset_val, 
                     learning_rate=config.LEARNING_RATE / 10,
@@ -370,9 +377,7 @@ if __name__=="__main__":
 
     if sys.argv[1]=='heads_all':
         print "...............Start Training I"
-        #model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20180927T1747/mask_rcnn_particles_0050.h5"
-        #model_path="/data/dayajun/sw/Mask_RCNN/logs/particles20181010T2123/mask_rcnn_particles_0028.h5"
-        model_path=""
+        model_path=path_model
         if model_path:
             model.load_weights(model_path, by_name=True)
         #'''
