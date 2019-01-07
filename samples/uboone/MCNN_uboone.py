@@ -3,8 +3,8 @@ from __future__ import division
 #from __future__ import print_function
 
 import os
-#os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-#os.environ["CUDA_VISIBLE_DEVICES"]="2"
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import sys
 import random
 import math
@@ -14,6 +14,7 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+from sklearn.cluster import DBSCAN
 
 # Force print 
 
@@ -28,10 +29,10 @@ import mrcnn.model as modellib
 from mrcnn import visualize
 from mrcnn.model import log
 
-
-path_train=sys.argv[2]
-path_val=sys.argv[3]
-path_model=""
+if (len(sys.argv)>3):
+    path_train=sys.argv[2]
+    path_val=sys.argv[3]
+    path_model=""
 if len(sys.argv) == 5:
     path_model=sys.argv[4]
 
@@ -47,8 +48,9 @@ MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
 # In[2]:
 
-particle2pdg={11:'eminus',-11:'eminus',13:'muon',-13:'muon',22:'gamma',211:'piminus',-211:'piminus',2212:'proton'}
-pdg2instance={'eminus':3,'gamma':4,'muon':6,'piminus':8,'proton':9}
+pdg2particle={11:'eminus',-11:'eminus',13:'muon',-13:'muon',22:'gamma',211:'piminus',-211:'piminus',2212:'proton'}
+#particle2instance={'eminus':3,'gamma':4,'muon':6,'piminus':8,'proton':9}
+particle2instance={'eminus':3,'gamma':3,'muon':6,'piminus':8,'proton':9}
 
 
 # In[3]:
@@ -70,7 +72,7 @@ class UbooneConfig(Config):
     # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
     # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
     GPU_COUNT = 1
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
     
     BACKBONE_STRIDES = [4, 8, 16, 32, 64]
     
@@ -122,6 +124,20 @@ def getRGBfromI(RGBint):
     red =   (RGBint >> 16) & 255
     return red, green, blue
 
+def xy2bb(xy, this_bl):
+
+    tl=[np.min(xy[:,1]), np.max(xy[:,0])]
+    tr=[np.max(xy[:,1]), np.max(xy[:,0])]
+    bl=[np.min(xy[:,1]), np.min(xy[:,0])]
+    br=[np.max(xy[:,1]), np.min(xy[:,0])]
+
+    new_tl=[tl[0]+this_bl[0], tl[1]*6+this_bl[1]]
+    new_tr=[tr[0]+this_bl[0], tr[1]*6+this_bl[1]]
+    new_bl=[bl[0]+this_bl[0], bl[1]*6+this_bl[1]]
+    new_br=[br[0]+this_bl[0], br[1]*6+this_bl[1]]
+
+    return [new_tl,new_tr,new_bl,new_br]
+
 class UbooneDataset(utils.Dataset):
     def __init__(self,input_file):
         self.iom=larcv.IOManager(0) 
@@ -149,6 +165,7 @@ class UbooneDataset(utils.Dataset):
             #image_meta=mage.meta()
             pdgs=list([])
             bbs=list([])
+
             for j, roi in enumerate(self.ev_roi.ROIArray()):
                 #if j==0 : continue # First ROI name null with producer of iseg
                 if roi.PdgCode()==16: continue #nu_tau
@@ -161,21 +178,38 @@ class UbooneDataset(utils.Dataset):
                 if roi.PdgCode()==1000020030: continue #Alpha...                
                 if roi.PdgCode()==1000020040: continue #Alpha... 
                 
-                pdgs.append(roi.PdgCode())
-                #print '<<<<', i, j
-                #print roi.BB().size(),
-                bbs.append([[roi.BB()[self.plane].tl().x, roi.BB()[self.plane].tl().y],
-                            [roi.BB()[self.plane].tr().x, roi.BB()[self.plane].tr().y],
-                            [roi.BB()[self.plane].bl().x, roi.BB()[self.plane].bl().y],
-                            [roi.BB()[self.plane].br().x, roi.BB()[self.plane].br().y]])
-                '''
-                print i, roi.PdgCode()
-                print roi.BB()[self.plane].tl().x,roi.BB()[self.plane].tl().y
-                print roi.BB()[self.plane].tr().x,roi.BB()[self.plane].tr().y
-                print roi.BB()[self.plane].bl().x,roi.BB()[self.plane].bl().y
-                print roi.BB()[self.plane].br().x,roi.BB()[self.plane].br().y
-                #print roi.BB().size()
-                '''
+                if ((roi.PdgCode()==22 or roi.PdgCode==11 or roi.PdgCode==-11) and True):
+                    image=self.ev_image.Image2DArray()[2]
+                    
+                    meta = image.meta()
+
+                    image.threshold(10,0)
+                    image_np=larcv.as_ndarray(image)
+                    X = np.argwhere(image_np>0)
+                    if (0 not in X.shape):
+                        db = DBSCAN(eps=4, min_samples=10).fit(X)
+
+                        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+                        core_samples_mask[db.core_sample_indices_] = True
+                        labels = db.labels_
+                        unique_labels = set(labels)
+                        for k in unique_labels:
+                            if k == -1: continue
+                            class_member_mask = (labels == k)
+                            xy = X[class_member_mask & core_samples_mask]
+                            this_bl=[meta.bl().x, meta.bl().y]
+
+                            bb_this=xy2bb(xy, this_bl)
+
+                            pdgs.append(11)
+                            bbs.append(bb_this)
+                
+                else:
+                    pdgs.append(roi.PdgCode())
+                    bbs.append([[roi.BB()[self.plane].tl().x, roi.BB()[self.plane].tl().y],
+                                [roi.BB()[self.plane].tr().x, roi.BB()[self.plane].tr().y],
+                                [roi.BB()[self.plane].bl().x, roi.BB()[self.plane].bl().y],
+                                [roi.BB()[self.plane].br().x, roi.BB()[self.plane].br().y]])
             if len(pdgs):
                 #image_bb=[image_meta.tl(),image_meta.tr(),image_meta.bl(),image_meta.br()]
                 self.add_image("Particles", image_id=i, path=None,
@@ -228,6 +262,50 @@ class UbooneDataset(utils.Dataset):
         else:
             super(self.__class__).image_reference(self, image_id)
 
+
+    def load_bbox(self, image_id):
+        info = self.image_info[image_id]
+        pdgs = info['pdgs']
+        bbs = info['bbs']
+        count = len(pdgs)
+        mask = np.zeros([info['height'], info['width'], count], dtype=np.uint8)
+        assert (len(bbs)==len(pdgs)), 'bbs len does not equal  '
+
+        image,img_mask,_ = self.load_this_entry(image_id)
+        image_meta=image.meta()
+        image.binary_threshold(10,0,1)
+        img_ori_np = larcv.as_ndarray(image)
+
+        y = set(img_ori_np.flatten())
+
+        img_mask_np = larcv.as_ndarray(img_mask)
+
+        boxes=np.zeros((count,4,2))
+
+        for i in xrange(count):
+            pdg=pdgs[i]
+            bb=bbs[i]
+
+            bb_tl=bb[0]
+            bb_tr=bb[1]
+            bb_bl=bb[2]
+            bb_br=bb[3]
+
+            new_tl = np.array([abs(image_meta.tl().x-bb_tl[0]), abs((image_meta.tl().y-bb_tl[1])/6)])
+            new_tr = np.array([abs(image_meta.tl().x-bb_tr[0]), abs((image_meta.tl().y-bb_tr[1])/6)])
+            new_bl = np.array([abs(image_meta.tl().x-bb_bl[0]), abs((image_meta.tl().y-bb_bl[1])/6)])
+            new_br = np.array([abs(image_meta.tl().x-bb_br[0]), abs((image_meta.tl().y-bb_br[1])/6)])
+            
+            #if pdg==11: #this is introduced by some bug when generating bbox
+            new_tl[1]= 512-new_tl[1]
+            new_tr[1]= 512-new_tr[1]
+            new_bl[1]= 512-new_bl[1]
+            new_br[1]= 512-new_br[1]
+
+            boxes[i]=np.array([new_tl,new_tr,new_bl,new_br])
+
+        return boxes
+
     def load_mask(self, image_id):
         info = self.image_info[image_id]
         pdgs = info['pdgs']
@@ -235,11 +313,6 @@ class UbooneDataset(utils.Dataset):
         count = len(pdgs)
         mask = np.zeros([info['height'], info['width'], count], dtype=np.uint8)
         assert (len(bbs)==len(pdgs)), 'bbs len does not equal  '
-        #print bbs
-        #print pdgs
-        #for bb in bbs:
-            #print 'bb size ', bb
-            #assert(bb.size()==3),'bb size is not 3, but is %i'%bb.size()
 
         #img = self.ev_instance.Image2DArray()[self.plane]
         if(verbose): sys.stdout.write("%s \n"%'>>>>load_this_entry in load_mask')
@@ -249,71 +322,82 @@ class UbooneDataset(utils.Dataset):
         image_meta=image.meta()
         image.binary_threshold(10,0,1)
         img_ori_np = larcv.as_ndarray(image)
-        #print 'img_ori_np shape', img_ori_np.shape
+
         y = set(img_ori_np.flatten())
-        #print y
+
         img_mask_np = larcv.as_ndarray(img_mask)
-        #print 'img_mask_np shape', img_mask_np.shape
-        #for i,pdg in enumerate(pdgs):
-            #print i, pdg
-        '''
-        print 'image, tl, ',image_meta.tl().x,image_meta.tl().y
-        print 'image, tr, ',image_meta.tr().x,image_meta.tr().y
-        print 'image, bl, ',image_meta.bl().x,image_meta.bl().y
-        print 'image, br, ',image_meta.br().x,image_meta.br().y
-        print 'count, ',count
-        '''
+        
         for i in xrange(count):
             #if i==1 : continue
             #print i
             pdg=pdgs[i]
-            #print bbs[i].size()
+            
             bb=bbs[i]
 
             bb_tl=bb[0]
             bb_tr=bb[1]
             bb_bl=bb[2]
             bb_br=bb[3]
-            '''
-            print 'pgd,  ',pdg
-            print 'bb tl, ',bb_tl[0],bb_tl[1]
-            print 'bb tr, ',bb_tr[0],bb_tr[1]
-            print 'bb bl, ',bb_bl[0],bb_bl[1]
-            print 'bb br, ',bb_br[0],bb_br[1]
-            '''
-            #print image_meta.tl().x-bb.tl().x
 
-            new_tl = (abs(image_meta.tl().x-bb_tl[0]), abs((image_meta.tl().y-bb_tl[1])/6))
-            new_tr = (abs(image_meta.tl().x-bb_tr[0]), abs((image_meta.tl().y-bb_tr[1])/6))
-            new_bl = (abs(image_meta.tl().x-bb_bl[0]), abs((image_meta.tl().y-bb_bl[1])/6))
-            new_br = (abs(image_meta.tl().x-bb_br[0]), abs((image_meta.tl().y-bb_br[1])/6))
-            
-            #new_tl = (bb.tl().x-image_meta.bl().x, bb.tl().y-image_meta.bl().y))
-            '''
-            print 'new_tl',new_tl
-            print 'new_tr',new_tr
-            print 'new_bl',new_bl
-            print 'new_br',new_br
-            '''
-            instance = pdg2instance[particle2pdg[pdg]]
-            img_np_=img_mask_np.copy()
-            img_np_[img_np_!=instance]=0
-            img_np_[img_np_==instance]=1
+            if pdg==11: #this is introduced by some bug when generating bbox
+                new_tl = np.array([abs(image_meta.tl().x-bb_tl[0]), abs((image_meta.tl().y-bb_tl[1])/6)])
+                new_tr = np.array([abs(image_meta.tl().x-bb_tr[0]), abs((image_meta.tl().y-bb_tr[1])/6)])
+                new_bl = np.array([abs(image_meta.tl().x-bb_bl[0]), abs((image_meta.tl().y-bb_bl[1])/6)])
+                new_br = np.array([abs(image_meta.tl().x-bb_br[0]), abs((image_meta.tl().y-bb_br[1])/6)])
+                        
+                new_tl[1]= 512-new_tl[1]
+                new_tr[1]= 512-new_tr[1]
+                new_bl[1]= 512-new_bl[1]
+                new_br[1]= 512-new_br[1]
+                
+                instance = particle2instance[pdg2particle[pdg]]
+                img_np_=img_mask_np.copy()
 
-            img_np_[:int(new_tl[0]), :]=0
-            img_np_[int(new_tr[0]):, :]=0
-            img_np_[:, int(new_bl[1]):]=0
-            img_np_[:, :int(new_tl[1])]=0
-            #print img_np_.shape
 
-            img_np_=img_np_*img_ori_np
-            
-            img_np_=img_np_.reshape(512,512,1)
-            
-            mask[:,:,i:i+1]=img_np_
+                np_eminus=img_np_==3
+                np_gamma =img_np_==4
+                img_np_=np_eminus+np_gamma
 
-            
+                xl=int(min(new_tl[0],new_tr[0]))
+                xr=int(max(new_tl[0],new_tr[0]))
+                img_np_[:, :xl]=0
+                img_np_[:, xr:]=0
+                
+                yb=int(min(new_bl[1],new_tl[1]))
+                yt=int(max(new_bl[1],new_tl[1]))
+                img_np_[:yb, :]=0
+                img_np_[yt:, :]=0
+                img_np_=img_np_*img_ori_np
+                img_np_=img_np_.reshape(512,512,1)
+                mask[:,:,i:i+1]=img_np_
+            else:        
+                new_tl = (abs(image_meta.tl().x-bb_tl[0]), abs((image_meta.tl().y-bb_tl[1])/6))
+                new_tr = (abs(image_meta.tl().x-bb_tr[0]), abs((image_meta.tl().y-bb_tr[1])/6))
+                new_bl = (abs(image_meta.tl().x-bb_bl[0]), abs((image_meta.tl().y-bb_bl[1])/6))
+                new_br = (abs(image_meta.tl().x-bb_br[0]), abs((image_meta.tl().y-bb_br[1])/6))
+
+                instance = particle2instance[pdg2particle[pdg]]
+                img_np_=img_mask_np.copy()
+                
+                np_eminus=img_np_==3
+                np_gamma =img_np_==4
+                
+                img_np_[img_np_!=instance]=0
+                img_np_[img_np_==instance]=1
+                img_np_+=np_eminus
+                img_np_+=np_gamma
+                
+                img_np_[:int(new_tl[0]), :]=0
+                img_np_[int(new_tr[0]):, :]=0
+                img_np_[:, int(new_bl[1]):]=0
+                img_np_[:, :int(new_tl[1])]=0
+
+                img_np_=img_np_*img_ori_np
+                img_np_=img_np_.reshape(512,512,1)
+                mask[:,:,i:i+1]=img_np_
+
         occlusion = np.logical_not(mask[:, :, -1]).astype(np.uint8)
+
         for i in range(count-2, -1, -1):
             mask[:, :, i] = mask[:, :, i] * occlusion
             occlusion = np.logical_and(occlusion, np.logical_not(mask[:, :, i]))
@@ -326,11 +410,11 @@ if __name__=="__main__":
     config.display()
 
     dataset_train = UbooneDataset(path_train)
-    dataset_train.load_events(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+    dataset_train.load_events(10, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_train.prepare()
     
     dataset_val = UbooneDataset(path_val)
-    dataset_val.load_events(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+    dataset_val.load_events(10, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset_val.prepare()
     
     # Create model in training mode

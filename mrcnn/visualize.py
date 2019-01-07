@@ -134,8 +134,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
 
     # Show area outside image boundaries.
     height, width = image.shape[:2]
-    ax.set_ylim(height + 10, -10)
-    ax.set_xlim(-10, width + 10)
+    #ax.set_ylim(height + 10, -10)
+    #ax.set_xlim(-10, width + 10)
     #ax.axis('off')
     ax.set_title(title)
 
@@ -182,7 +182,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     #ax.imshow(masked_image.astype(np.uint8))
-    ax.imshow(masked_image[:,:,0])
+    ax.imshow(masked_image[:,:,0], origin="lower")
     if auto_show:
         plt.show()
 

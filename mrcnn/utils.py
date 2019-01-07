@@ -6,7 +6,8 @@ Copyright (c) 2017 Matterport, Inc.
 Licensed under the MIT License (see LICENSE for details)
 Written by Waleed Abdulla
 """
-
+from __future__ import absolute_import
+from __future__ import division
 import sys
 import os
 import math
