@@ -275,7 +275,6 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
             # Mask
             m = utils.unmold_mask(mask[id], rois[id]
                                   [:4].astype(np.int32), image.shape)
-            print 'in vis,', masked_image.shape
             masked_image = apply_mask(masked_image, m, color)
 
     ax.imshow(masked_image)

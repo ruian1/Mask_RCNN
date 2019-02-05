@@ -19,7 +19,6 @@ import skimage.color
 import skimage.io
 import skimage.transform
 #import urllib.request
-import urllib2
 import shutil
 import warnings
 from distutils.version import LooseVersion
@@ -271,7 +270,7 @@ class Dataset(object):
         self._image_ids = []
         self.image_info = []
         # Background is always the first class
-        self.class_info = [{"source": "", "id": 0, "name": "BG"}]
+        self.class_info = [{"source": "", "id": 0, "name": 0}]
         self.source_class_ids = {}
 
     def add_class(self, source, class_id, class_name):
@@ -897,7 +896,7 @@ def denorm_boxes(boxes, shape):
     """
     h, w = shape
     scale = np.array([h - 1, w - 1, h - 1, w - 1])
-    shift = np.array([0, 0, 1, 1])
+    shift = np.array([0, 0, 1., 1.])
     return np.around(np.multiply(boxes, scale) + shift).astype(np.int32)
 
 

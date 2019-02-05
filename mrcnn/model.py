@@ -1,3 +1,4 @@
+from __future__ import division
 """
 Mask R-CNN
 The main Mask R-CNN model implementation.
@@ -31,6 +32,8 @@ from mrcnn import utils
 from distutils.version import LooseVersion
 assert LooseVersion(tf.__version__) >= LooseVersion("1.3")
 assert LooseVersion(keras.__version__) >= LooseVersion('2.0.8')
+
+
 
 verbose=0
 
@@ -2214,10 +2217,9 @@ class MaskRCNN():
 
         # Add L2 Regularization
         # Skip gamma and beta weights of batch normalization layers.
-        reg_losses = [
-            keras.regularizers.l2(self.config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
-            for w in self.keras_model.trainable_weights
-            if 'gamma' not in w.name and 'beta' not in w.name]
+        reg_losses = [keras.regularizers.l2(self.config.WEIGHT_DECAY)(w) / tf.cast(tf.size(w), tf.float32)
+                      for w in self.keras_model.trainable_weights
+                      if 'gamma' not in w.name and 'beta' not in w.name]
         self.keras_model.add_loss(tf.add_n(reg_losses))
 
         # Compile
