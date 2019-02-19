@@ -263,7 +263,8 @@ class UbooneDataset(utils.Dataset):
         self.counter+=1
         self.iom.read_entry(entry, True)
         self.ev_image    = self.iom.get_data(larcv.kProductImage2D,"wire")
-        self.ev_roi      = self.iom.get_data(larcv.kProductROI,"rui")
+        #self.ev_roi      = self.iom.get_data(larcv.kProductROI,"rui")
+        self.ev_instance = self.iom.get_data(larcv.kProductImage2D,"segment_rui")
         self.ev_instance = self.iom.get_data(larcv.kProductImage2D,"segment_rui")
         #print "run", self.ev_image.run(),", subrun", self.ev_image.subrun(), ", event",self.ev_image.event()
         if(verbose): sys.stdout.write("run %s, subrun %s, event %s \n"%(self.ev_image.run(),self.ev_image.subrun(),self.ev_image.event()))
