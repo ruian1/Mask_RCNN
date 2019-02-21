@@ -15,7 +15,8 @@ from lib.config import config_loader
 from lib.rootdata_maskrcnn import ROOTData
 
 #for MCNN
-ROOT_DIR = os.path.abspath("../../../")
+#ROOT_DIR = os.path.abspath("../../../")
+ROOT_DIR = os.path.abspath("/usr/local/share/dllee_unified/Mask_RCNN")
 sys.path.append(ROOT_DIR)  #To find local version of the library
 
 from mrcnn import utils
