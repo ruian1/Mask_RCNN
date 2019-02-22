@@ -133,7 +133,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
     iom.initialize()
 
     for entry in xrange(iom.get_n_entries()):
-        if entry>0: continue
+
         iom.read_entry(entry)
 
         ev_pgr = iom.get_data(larcv.kProductPGraph,"inter_par")
