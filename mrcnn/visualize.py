@@ -182,7 +182,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     #ax.imshow(masked_image.astype(np.uint8))
-    ax.imshow(masked_image[:,:,0], origin="lower")
+    ax.imshow(masked_image[:,:,0], origin="lower", cmap="jet")
     if auto_show:
         plt.show()
 
