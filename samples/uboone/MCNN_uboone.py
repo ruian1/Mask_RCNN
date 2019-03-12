@@ -139,9 +139,10 @@ def xy2bb(xy, this_bl):
     return [new_tl,new_tr,new_bl,new_br]
 
 class UbooneDataset(utils.Dataset):
-    def __init__(self,input_file):
+    def __init__(self,*args):
         self.iom=larcv.IOManager(0) 
-        self.iom.add_in_file(input_file)
+        for each in args:
+            self.iom.add_in_file(each)
         self.iom.initialize()
         self.counter=1
         super(UbooneDataset, self).__init__()
