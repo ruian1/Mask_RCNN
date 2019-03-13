@@ -83,19 +83,21 @@ def apply_mask(image, mask, color, alpha=0.5):
     print 'image shape',image.shape
     print 'mask shape',mask.shape
     """
-    #print image.shape
-    #print mask.shape
+
+    c = 0.299 * color[0] + 0.587 *color[1] + 0.114 *color[2]
+            
     if len(image.shape)==3:
         image[:, :, 0] = np.where(mask == 1,
                                   image[:, :,0] *
-                                  (1 - alpha) + alpha * 255,
+                                  (1 - alpha) * c + alpha * 255 * c * 3, #Hoo, finally found a good number of 3
                                   image[:, :,0])
 
     if len(image.shape)==2:
         image[:, :] = np.where(mask == 1,
                                image[:, :] *
-                               (1 - alpha) + alpha * 255,
+                               (1 - alpha) * c + alpha * 255 * c * 3,
                                image[:, :])
+        
     return image
 
 
@@ -163,7 +165,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             caption = "{} {:.3f}".format(label, score) if score else label
         else:
             caption = captions[i]
-        ax.text(x1, y1 + 8, caption,
+        ax.text(x1, y1 + 18, caption,
                 color='w', size=11, backgroundcolor="none")
 
         # Mask
@@ -175,14 +177,16 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         padded_mask = np.zeros(
             (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
         padded_mask[1:-1, 1:-1] = mask
+        '''
         contours = find_contours(padded_mask, 0.5)
         for verts in contours:
             # Subtract the padding and flip (y, x) to (x, y)
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
+        '''
     #ax.imshow(masked_image.astype(np.uint8))
-    ax.imshow(masked_image[:,:,0], origin="lower")
+    ax.imshow(masked_image[:,:,0], origin="lower", cmap="jet")
     if auto_show:
         plt.show()
 
