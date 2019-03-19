@@ -101,7 +101,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
     #FOUT = os.path.join(OUT_DIR,"multimaskrcnn_out_04.root")
     tfile = ROOT.TFile.Open(FOUT,"RECREATE")
     tfile.cd()
-    print "OPEN %s"%FOUT
+    #print "OPEN %s"%FOUT
 
     tree  = ROOT.TTree("maskrcnn_tree","")
     rd.init_tree(tree)
@@ -136,6 +136,8 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
 
         iom.read_entry(entry)
 
+        if entry>10: continue
+        
         ev_pgr = iom.get_data(larcv.kProductPGraph,"inter_par")
         ev_par = iom.get_data(larcv.kProductPixel2D,"inter_par_pixel")
         ev_pix = iom.get_data(larcv.kProductPixel2D,"inter_img_pixel")
@@ -217,6 +219,12 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
 
                 img_pix_arr = image_modify(img_pix, cfg)
                 img_int_arr = image_modify(img_int, cfg)
+
+                fig,ax=plt.subplots(1,1,figsize=(8,6))
+                #print img_pix_arr.shape
+                #ax.imshow(img_pix_arr[:,:,0])
+                #fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
+                
                 
                 #Detection
                 #from datetime import datetime
@@ -243,21 +251,41 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                         roi_int.push_back(int(roi_int32))
                     rd.rois_plane2.push_back(roi_int)
 
+                #print "found %i masks"%r['masks'].shape[-1]
                 for x in xrange(r['masks'].shape[-1]):
+                    this_mask=r['masks'][:,:,x]
+                    #print "this mask has sum of %i"%(np.sum(this_mask))
+                    #print "shape is ",this_mask.shape
+
+                    this_mask=this_mask.flatten()
+                    
+                    mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
+
+                    #print mask.size()
+                    #print len(this_mask)
+                    
+                    for idx in xrange(cfg.xdim*cfg.ydim):
+                        #print idx
+                        mask[idx]=this_mask[idx]
+                    
+                    #mask=this_mask
+                    rd.masks_plane2_1d.push_back(mask)
+
+                    #Store images in 2D vector, not compatible with pandas, uproot etc.
+                    '''
                     mask=ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, False))
                     this_mask=r['masks'][:,:,x]
                     for idx in xrange(this_mask.shape[0]):
                         for idy in xrange(this_mask.shape[1]):
                             mask[idx][idy]=this_mask[idx][idy]
-                    rd.masks_plane2.push_back(mask)
-                    
+                    rd.masks_plane2_2d.push_back(mask)
+                    '''
             tree.Fill()
             rd.reset_vertex()
     tfile.cd()
     tree.Write()
     tfile.Close()
     iom.finalize()
-    
 
 if __name__ == '__main__':
     

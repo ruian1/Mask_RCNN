@@ -6,6 +6,7 @@ class config_loader(object):
         data = data.split("\n")
         for line in data:
 	    if line == "": continue
+            if line.startswith("#"): continue
             SS = "self." + line
             print SS
             exec(SS)

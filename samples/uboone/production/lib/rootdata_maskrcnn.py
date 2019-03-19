@@ -22,7 +22,10 @@ class ROOTData(object):
         self.scores_plane2    = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.class_ids_plane2 = ROOT.std.vector("int")(3,kINVALID_INT)
         self.rois_plane2      = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
-        self.masks_plane2     = ROOT.std.vector(ROOT.std.vector(ROOT.std.vector("bool")))(3, ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, kINVALID_BOOL)))
+        #self.masks_plane2_2d  = ROOT.std.vector(ROOT.std.vector(ROOT.std.vector("bool")))(3, ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, kINVALID_BOOL)))
+
+        # To-do, write sparse matrix, also needs changes in larcv
+        self.masks_plane2_1d  = ROOT.std.vector(ROOT.std.vector("bool"))(3, ROOT.std.vector("bool")(262144, kINVALID_BOOL))
         
     def reset_event(self):
         self.run[0]     = kINVALID_INT
@@ -39,7 +42,8 @@ class ROOTData(object):
         self.scores_plane2.clear()
         self.class_ids_plane2.clear()
         self.rois_plane2.clear()
-        self.masks_plane2.clear()
+        self.masks_plane2_1d.clear()
+        #self.masks_plane2_2d.clear()
 
         
     def reset(self):
@@ -62,5 +66,6 @@ class ROOTData(object):
         tree.Branch("scores_plane2", self.scores_plane2)
         tree.Branch("class_ids_plane2", self.class_ids_plane2)
         tree.Branch("rois_plane2", self.rois_plane2)
-        tree.Branch("masks_plane2", self.masks_plane2)
+        #tree.Branch("masks_plane2_2d", self.masks_plane2_2d)
+        tree.Branch("masks_plane2_1d", self.masks_plane2_1d)
         
