@@ -173,7 +173,7 @@ class UbooneDataset(utils.Dataset):
             #image_meta=mage.meta()
             pdgs=list([])
             bbs=list([])
-
+            
             #print ('%ith event has %i pars,'%(i,self.ev_roi.ROIArray().size()))
             
             for j, roi in enumerate(self.ev_roi.ROIArray()):
@@ -306,14 +306,14 @@ class UbooneDataset(utils.Dataset):
         mask = np.zeros([info['height'], info['width'], count], dtype=np.uint8)
         assert (len(bbs)==len(pdgs)), 'bbs len does not equal  '
 
-        image,img_mask,_ = self.load_this_entry(image_id)
+        image,image_mask,_ = self.load_this_entry(image_id)
         image_meta=image.meta()
         image.binary_threshold(10,0,1)
         img_ori_np = larcv.as_ndarray(image)
 
         y = set(img_ori_np.flatten())
 
-        img_mask_np = larcv.as_ndarray(img_mask)
+        image_mask_np = larcv.as_ndarray(image_mask)
 
         boxes=np.zeros((count,4,2))
 
@@ -353,16 +353,17 @@ class UbooneDataset(utils.Dataset):
         if(verbose): sys.stdout.write("%s \n"%'>>>>load_this_entry in load_mask')
         #print '>>>>load_this_entry in load_mask'
         if(verbose): sys.stdout.flush()
-        image,img_mask,_ = self.load_this_entry(image_id)
+        image,image_mask,_ = self.load_this_entry(image_id)
         image_meta=image.meta()
+        print "image meta is ", image_meta.bl().x, image_meta.bl().y, image_meta.tr().x, image_meta.tr().y
         image.binary_threshold(10,0,1)
         img_ori_np = larcv.as_ndarray(image)
 
         #y = set(img_ori_np.flatten())
         
-        img_mask_np = larcv.as_ndarray(img_mask)
+        image_mask_np = larcv.as_ndarray(image_mask)
 
-        instance_set=set(img_mask_np.flatten())
+        instance_set=set(image_mask_np.flatten())
 
         #print ('instance set is, ', instance_set)
         
@@ -378,7 +379,9 @@ class UbooneDataset(utils.Dataset):
             bb_bl=bb[2]
             bb_br=bb[3]
 
-            #print pdg
+            print "pdg, ", pdg
+            if pdg==211:
+                print set(image_mask_np.flatten())
             
             if pdg==11: #this is introduced by some bug when generating bbox
                 new_tl = np.array([abs(image_meta.tl().x-bb_tl[0]), abs((image_meta.tl().y-bb_tl[1])/6)])
@@ -392,7 +395,7 @@ class UbooneDataset(utils.Dataset):
                 new_br[1]= 512-new_br[1]
                 
                 instance = particle2instance[pdg2particle[pdg]]
-                img_np_=img_mask_np.copy()
+                img_np_=image_mask_np.copy()
 
                 np_eminus=img_np_==3
                 np_gamma =img_np_==4
@@ -423,7 +426,7 @@ class UbooneDataset(utils.Dataset):
                 #print new_br
                 
                 instance = particle2instance[pdg2particle[pdg]]
-                img_np_=img_mask_np.copy()
+                img_np_=image_mask_np.copy()
                 
                 np_eminus=img_np_==3
                 np_gamma =img_np_==4
@@ -562,8 +565,8 @@ if __name__=="__main__":
         print "...............Start Training I"
         '''
         model.train(dataset_train, dataset_val, 
-                    learning_rate=config.LEARNING_RATE,
-                    epochs=200, 
+                    learning_rate=config.LEARNING_RATE / 10,
+                    epochs=100, 
                     layers="all")
 
     if sys.argv[1]=='heads_all':
