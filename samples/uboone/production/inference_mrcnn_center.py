@@ -47,6 +47,36 @@ def image_modify (img, cfg):
     
     return img_arr
 
+'''
+def nparray_modify(image_array, cfg):
+    image_array = np.where(image_array<cfg.adc_lo,         0,image_array)
+    image_array = np.where(image_array>cfg.adc_hi,cfg.adc_hi,image_array)
+    image_array = image_array.reshape(cfg.xdim,cfg.ydim, 1).astype(np.float32)
+    
+    return image_array
+'''
+
+def nparray_modify(image_array, cfg):
+
+    image_array = np.where(image_array<cfg.adc_lo,         0,image_array)
+    image_array = np.where(image_array>cfg.adc_hi,cfg.adc_hi,image_array)
+    if image_array.shape[0]==512:
+        image_array = image_array.reshape(cfg.xdim,cfg.ydim, 1).astype(np.float32)
+        return image_array
+
+    result=np.zeros([512,512])
+    
+    input_len = image_array.shape[0]
+    start = (512-input_len)/2
+    end = 512 - start
+    result[start:end, start:end] = image_array
+    result = result.reshape(cfg.xdim,cfg.ydim, 1).astype(np.float32)
+    
+    return result
+
+
+
+
 from MCNN_uboone import UbooneConfig
 class InferenceConfig(UbooneConfig):
     #Run detection on one image at a time
@@ -140,7 +170,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
         ev_par = iom.get_data(larcv.kProductPixel2D,"inter_par_pixel")
         ev_pix = iom.get_data(larcv.kProductPixel2D,"inter_img_pixel")
         ev_int = iom.get_data(larcv.kProductPixel2D,"inter_int_pixel")
-        #ev_img = iom.get_data(larcv.kProductImage2D,"wire")
+        ev_img = iom.get_data(larcv.kProductImage2D,"wire")
         
         #print '========================>>>>>>>>>>>>>>>>>>>>'
         #print 'run, subrun, event',ev_pix.run(),ev_pix.subrun(),ev_pix.event()
@@ -164,112 +194,96 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
             pixel2d_pix_vv = ev_pix.Pixel2DClusterArray()
             pixel2d_int_vv = ev_int.Pixel2DClusterArray()
 
-            #parid = pgraph.ClusterIndexArray().front()
-            #roi0 = pgraph.ParticleArray().front()
-
-            #x = roi0.X()
-            #y = roi0.Y()
-            #z = roi0.Z()
-
-            #y_2d_plane_0 = ROOT.Double()
-
+            x,y,z=-1,-1,-1
+            if (pgraph.ParticleArray().size()) :
+                roi0 = pgraph.ParticleArray().front()
+                x = roi0.X()
+                y = roi0.Y()
+                z = roi0.Z()
+            
+           
             for plane in xrange(3):
                 if plane!=2 : continue
-                #print "@plane=%d" % plane
-                
-                ###Get 2D vertex Image
-                
-                #meta = roi0.BB(plane)
+                if (pgraph.ParticleArray().size()) :
 
-                #x_2d = ROOT.Double()
-                #y_2d = ROOT.Double()
-                
-                #whole_img = ev_img.at(plane)
-                
-                #larcv.Project3D(whole_img.meta(), x, y, z, 0.0, plane, x_2d, y_2d)
-                ##print 'x2d, ', x_2d, 'y2d, ',y_2d
-                
-                #if (plane == 0) : y_2d_plane_0 = y_2d
-                #else : y_2d = y_2d_plane_0
-                
-                ###
-                weight_file = ""
-                exec("weight_file = cfg.weight_file_mrcnn_plane%d" % plane)
-
-                model.load_weights(weight_file, by_name=True)
-                
-                #nothing
-                #if pixel2d_vv.empty()==True: continue
-
-                pixel2d_pix_v = pixel2d_pix_vv.at(plane)
-                pixel2d_pix = pixel2d_pix_v.at(ix)
-
-		pixel2d_int_v = pixel2d_int_vv.at(plane)
-                pixel2d_int = pixel2d_int_v.at(ix)
-            
-                #nothing on this plane
-                #if pixel2d_pix.empty() == True: continue
-
-                rd.inferred[0] = 1
-                
-                img_pix = larcv.cluster_to_image2d(pixel2d_pix,cfg.xdim,cfg.ydim)
-                img_int = larcv.cluster_to_image2d(pixel2d_int,cfg.xdim,cfg.ydim)
-
-                img_pix_arr = image_modify(img_pix, cfg)
-                img_int_arr = image_modify(img_int, cfg)
-
-                fig,ax=plt.subplots(1,1,figsize=(8,6))
-                #print img_pix_arr.shape
-                #ax.imshow(img_pix_arr[:,:,0])
-                #fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
-                
-                
-                #Detection
-                #from datetime import datetime
-                #a = datetime.now()
-                
-                results = model.detect([img_pix_arr], verbose=0)
-
-                #b = datetime.now()
-                #c=b-a
-                #print 'using time of %i seconds'%c.seconds
-
-                r = results[0]
-                
-                for each in r['scores']:
-                    rd.scores_plane2.push_back(each)
-
-                for each in r['class_ids']:
-                    rd.class_ids_plane2.push_back(class_names[each])
-
-                for x in xrange(r['rois'].shape[0]):
-                    roi_int=ROOT.std.vector("int")(4,0)
-                    roi_int.clear()
-                    for roi_int32 in r['rois'][x]:
-                        roi_int.push_back(int(roi_int32))
-                    rd.rois_plane2.push_back(roi_int)
-
-                #print "found %i masks"%r['masks'].shape[-1]
-                for x in xrange(r['masks'].shape[-1]):
-                    this_mask=r['masks'][:,:,x]
-                    #print "this mask has sum of %i"%(np.sum(this_mask))
-                    #print "shape is ",this_mask.shape
-
-                    this_mask=this_mask.flatten()
+                    x_2d = ROOT.Double()
+                    y_2d = ROOT.Double()
+                    whole_img = ev_img.at(plane)
+                    meta=pgraph.ParticleArray().front().BB()
                     
-                    mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
 
-                    #print mask.size()
-                    #print len(this_mask)
+                    larcv.Project3D(meta[plane], x, y, z, 0.0, plane, x_2d, y_2d)
                     
-                    for idx in xrange(cfg.xdim*cfg.ydim):
-                        #print idx
-                        mask[idx]=this_mask[idx]
-                    
-                    #mask=this_mask
-                    rd.masks_plane2_1d.push_back(mask)
+                    width =int(meta[plane].tr().x-meta[plane].tl().x)
+                    height=int(meta[plane].tl().y-meta[plane].br().y)
+                    width = meta[plane].rows()
+                    height = meta[plane].cols()
 
-                    #Store images in 2D vector, not compatible with pandas, uproot etc.
+
+                    vertex_image=np.array(whole_img.crop(meta[plane]).as_vector()).reshape(width,height)
+
+                    vertex_image_modified=nparray_modify(vertex_image,cfg)
+                    
+                    weight_file = ""
+                    exec("weight_file = cfg.weight_file_mrcnn_plane%d" % plane)
+
+                    model.load_weights(weight_file, by_name=True)
+   
+
+                    rd.inferred[0] = 1
+                    '''
+                    fig,ax=plt.subplots(1,1,figsize=(8,6))
+                    print vertex_image_modified.shape
+                    ax.imshow(vertex_image_modified.reshape(cfg.xdim, cfg.ydim))
+                    fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
+                    '''
+                    
+                    #Detection
+                    #from datetime import datetime
+                    #a = datetime.now()
+                
+                    results = model.detect([vertex_image_modified], verbose=0)
+                    
+                    #b = datetime.now()
+                    #c=b-a
+                    #print 'using time of %i seconds'%c.seconds
+                
+                    r = results[0]
+                
+                    for each in r['scores']:
+                        rd.scores_plane2.push_back(each)
+                        
+                    for each in r['class_ids']:
+                        rd.class_ids_plane2.push_back(class_names[each])
+                            
+                    for x in xrange(r['rois'].shape[0]):
+                        roi_int=ROOT.std.vector("int")(4,0)
+                        roi_int.clear()
+                        for roi_int32 in r['rois'][x]:
+                            roi_int.push_back(int(roi_int32))
+                        rd.rois_plane2.push_back(roi_int)
+
+                    #print "found %i masks"%r['masks'].shape[-1]
+                    for x in xrange(r['masks'].shape[-1]):
+                        this_mask=r['masks'][:,:,x]
+                        #print "this mask has sum of %i"%(np.sum(this_mask))
+                        #print "shape is ",this_mask.shape
+                        
+                        this_mask=this_mask.flatten()
+                    
+                        mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
+
+                        #print mask.size()
+                        #print len(this_mask)
+                    
+                        for idx in xrange(cfg.xdim*cfg.ydim):
+                            #print idx
+                            mask[idx]=this_mask[idx]
+                    
+                            #mask=this_mask
+                        rd.masks_plane2_1d.push_back(mask)
+
+                    #Store images in 2D vector, not compatible with pandas, uproot etc. lines above stored as 1d vector
                     '''
                     mask=ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, False))
                     this_mask=r['masks'][:,:,x]
