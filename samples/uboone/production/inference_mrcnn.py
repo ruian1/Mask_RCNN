@@ -4,7 +4,7 @@ import ROOT
 from larcv import larcv
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 BASE_PATH = os.path.realpath(__file__)
 BASE_PATH = os.path.dirname(BASE_PATH)
@@ -218,7 +218,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                 img_pix_arr = image_modify(img_pix, cfg)
                 img_int_arr = image_modify(img_int, cfg)
 
-                fig,ax=plt.subplots(1,1,figsize=(8,6))
+                #fig,ax=plt.subplots(1,1,figsize=(8,6))
                 #print img_pix_arr.shape
                 #ax.imshow(img_pix_arr[:,:,0])
                 #fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
