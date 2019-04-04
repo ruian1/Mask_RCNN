@@ -117,6 +117,15 @@ def IOU(bbs_t, bbs_r):
 
     return(int_area)/(tot_area)
 
+def point_points_distances(point, points):
+    points_x=points[0]
+    points_y=points[1]
+    point_x=point[0]
+    point_y=point[1]
+    distances=[((point_y-points_y[idx])**2+(point_x-points_x[idx])**2)**0.5 for idx in xrange(len(points_x))]
+    if (len(distances)==0) : return -200
+    return min(np.array(distances))
+
 def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
 
     class_names=[0, 11, -11, 13, -13, 22, 211, -211, 2212]
@@ -252,7 +261,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                 
                     for each in r['scores']:
                         rd.scores_plane2.push_back(each)
-                        
+
                     for each in r['class_ids']:
                         rd.class_ids_plane2.push_back(class_names[each])
                             
@@ -263,26 +272,40 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                             roi_int.push_back(int(roi_int32))
                         rd.rois_plane2.push_back(roi_int)
 
-                    #print "found %i masks"%r['masks'].shape[-1]
+                    classes_np=r['class_ids']
+                    # masks are too large, now only store needed values
+                    masks_np=np.zeros([r['masks'].shape[-1], cfg.xdim*cfg.ydim])
                     for x in xrange(r['masks'].shape[-1]):
                         this_mask=r['masks'][:,:,x]
-                        #print "this mask has sum of %i"%(np.sum(this_mask))
-                        #print "shape is ",this_mask.shape
-                        
                         this_mask=this_mask.flatten()
-                    
+                        masks_np[x] = this_mask
+                        '''
                         mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
-
-                        #print mask.size()
-                        #print len(this_mask)
-                    
                         for idx in xrange(cfg.xdim*cfg.ydim):
-                            #print idx
                             mask[idx]=this_mask[idx]
-                    
-                            #mask=this_mask
                         rd.masks_plane2_1d.push_back(mask)
+                        '''
 
+                    idx=0
+                    for each_class in classes_np :
+                        pdg=class_names[each_class]
+                        if pdg==11:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.electron_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.electron_mask_dist.push_back(this_dist)
+                        elif pdg==13:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.muon_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.muon_mask_dist.push_back(this_dist)
+                        elif pdg==2212:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.proton_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.proton_mask_dist.push_back(this_dist)
+
+                        idx+=1
                     #Store images in 2D vector, not compatible with pandas, uproot etc. lines above stored as 1d vector
                     '''
                     mask=ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, False))
