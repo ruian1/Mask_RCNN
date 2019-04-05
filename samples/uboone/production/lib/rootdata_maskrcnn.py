@@ -22,11 +22,18 @@ class ROOTData(object):
         self.scores_plane2    = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.class_ids_plane2 = ROOT.std.vector("int")(3,kINVALID_INT)
         self.rois_plane2      = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
-        #self.masks_plane2_2d  = ROOT.std.vector(ROOT.std.vector(ROOT.std.vector("bool")))(3, ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, kINVALID_BOOL)))
 
         # To-do, write sparse matrix, also needs changes in larcv
-        self.masks_plane2_1d  = ROOT.std.vector(ROOT.std.vector("bool"))(3, ROOT.std.vector("bool")(262144, kINVALID_BOOL))
+        #self.masks_plane2_1d  = ROOT.std.vector(ROOT.std.vector("bool"))(3, ROOT.std.vector("bool")(262144, kINVALID_BOOL))
+
+        self.electron_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.muon_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.proton_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
         
+        self.electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.muon_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.proton_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+
     def reset_event(self):
         self.run[0]     = kINVALID_INT
         self.subrun[0]  = kINVALID_INT
@@ -42,9 +49,16 @@ class ROOTData(object):
         self.scores_plane2.clear()
         self.class_ids_plane2.clear()
         self.rois_plane2.clear()
-        self.masks_plane2_1d.clear()
+        #self.masks_plane2_1d.clear()
         #self.masks_plane2_2d.clear()
 
+        self.electron_mask_sum.clear()
+        self.muon_mask_sum.clear()
+        self.proton_mask_sum.clear()
+        
+        self.electron_mask_dist.clear()
+        self.muon_mask_dist.clear()
+        self.proton_mask_dist.clear()
         
     def reset(self):
         self.reset_event()
@@ -67,5 +81,14 @@ class ROOTData(object):
         tree.Branch("class_ids_plane2", self.class_ids_plane2)
         tree.Branch("rois_plane2", self.rois_plane2)
         #tree.Branch("masks_plane2_2d", self.masks_plane2_2d)
-        tree.Branch("masks_plane2_1d", self.masks_plane2_1d)
+        #tree.Branch("masks_plane2_1d", self.masks_plane2_1d)
+
+        tree.Branch("electron_mask_sum", self.electron_mask_sum)
+        tree.Branch("muon_mask_sum", self.muon_mask_sum)
+        tree.Branch("proton_mask_sum", self.proton_mask_sum)
+
+        tree.Branch("electron_mask_dist", self.electron_mask_dist)
+        tree.Branch("muon_mask_dist", self.muon_mask_dist)
+        tree.Branch("proton_mask_dist", self.proton_mask_dist)
+
         
