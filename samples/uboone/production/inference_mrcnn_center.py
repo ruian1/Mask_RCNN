@@ -437,9 +437,10 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
 
 
                         idx+=1
-                        
-                    import matplotlib.pyplot as plt
+                    
+                    import matplotlib
                     matplotlib.use('Agg')
+                    import matplotlib.pyplot as plt
 
                     fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
                     visualize.display_instances(vertex_image_modified, r_center['rois'],
