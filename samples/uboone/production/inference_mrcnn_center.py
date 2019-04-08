@@ -4,7 +4,6 @@ import ROOT
 from larcv import larcv
 import numpy as np
 import tensorflow as tf
-#import matplotlib.pyplot as plt
 
 BASE_PATH = os.path.realpath(__file__)
 BASE_PATH = os.path.dirname(BASE_PATH)
@@ -60,6 +59,7 @@ def nparray_modify(image_array, cfg):
 
     image_array = np.where(image_array<cfg.adc_lo,         0,image_array)
     image_array = np.where(image_array>cfg.adc_hi,cfg.adc_hi,image_array)
+
     if image_array.shape[0]==512:
         image_array = image_array.reshape(cfg.xdim,cfg.ydim, 1).astype(np.float32)
         return image_array
@@ -243,47 +243,48 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                     '''
                     fig,ax=plt.subplots(1,1,figsize=(8,6))
                     print vertex_image_modified.shape
-                    ax.imshow(vertex_image_modified.reshape(cfg.xdim, cfg.ydim))
+                    #ax.imshow(vertex_image_modified.reshape(cfg.xdim, cfg.ydim))
                     fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
                     '''
                     
-                    #Detection
+                    #Detection-1, for image with vectex centered
                     #from datetime import datetime
                     #a = datetime.now()
                 
-                    results = model.detect([vertex_image_modified], verbose=0)
+                    results_center = model.detect([vertex_image_modified], verbose=0)
                     
                     #b = datetime.now()
                     #c=b-a
                     #print 'using time of %i seconds'%c.seconds
                 
-                    r = results[0]
-                
-                    for each in r['scores']:
-                        rd.scores_plane2.push_back(each)
+                    r_center = results_center[0]
 
-                    for each in r['class_ids']:
-                        rd.class_ids_plane2.push_back(class_names[each])
+
+                    for each in r_center['scores']:
+                        rd.center_scores_plane2.push_back(each)
+
+                    for each in r_center['class_ids']:
+                        rd.center_class_ids_plane2.push_back(class_names[each])
                             
-                    for x in xrange(r['rois'].shape[0]):
+                    for x in xrange(r_center['rois'].shape[0]):
                         roi_int=ROOT.std.vector("int")(4,0)
                         roi_int.clear()
-                        for roi_int32 in r['rois'][x]:
+                        for roi_int32 in r_center['rois'][x]:
                             roi_int.push_back(int(roi_int32))
-                        rd.rois_plane2.push_back(roi_int)
+                        rd.center_rois_plane2.push_back(roi_int)
 
-                    classes_np=r['class_ids']
+                    classes_np=r_center['class_ids']
                     # masks are too large, now only store needed values
-                    masks_np=np.zeros([r['masks'].shape[-1], cfg.xdim*cfg.ydim])
-                    for x in xrange(r['masks'].shape[-1]):
-                        this_mask=r['masks'][:,:,x]
+                    masks_np=np.zeros([r_center['masks'].shape[-1], cfg.xdim*cfg.ydim])
+                    for x in xrange(r_center['masks'].shape[-1]):
+                        this_mask=r_center['masks'][:,:,x]
                         this_mask=this_mask.flatten()
                         masks_np[x] = this_mask
                         '''
                         mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
                         for idx in xrange(cfg.xdim*cfg.ydim):
                             mask[idx]=this_mask[idx]
-                        rd.masks_plane2_1d.push_back(mask)
+                        rd.center_masks_plane2_1d.push_back(mask)
                         '''
 
                     idx=0
@@ -291,30 +292,171 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                         pdg=class_names[each_class]
                         if pdg==11:
                             this_sum=np.sum(masks_np[idx])
-                            rd.electron_mask_sum.push_back(np.int(this_sum))
+                            rd.center_electron_mask_sum.push_back(np.int(this_sum))
                             this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
-                            rd.electron_mask_dist.push_back(this_dist)
+                            rd.center_electron_mask_dist.push_back(this_dist)
                         elif pdg==13:
                             this_sum=np.sum(masks_np[idx])
-                            rd.muon_mask_sum.push_back(np.int(this_sum))
+                            rd.center_muon_mask_sum.push_back(np.int(this_sum))
                             this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
-                            rd.muon_mask_dist.push_back(this_dist)
+                            rd.center_muon_mask_dist.push_back(this_dist)
                         elif pdg==2212:
                             this_sum=np.sum(masks_np[idx])
-                            rd.proton_mask_sum.push_back(np.int(this_sum))
+                            rd.center_proton_mask_sum.push_back(np.int(this_sum))
                             this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
-                            rd.proton_mask_dist.push_back(this_dist)
+                            rd.center_proton_mask_dist.push_back(this_dist)
 
                         idx+=1
                     #Store images in 2D vector, not compatible with pandas, uproot etc. lines above stored as 1d vector
                     '''
                     mask=ROOT.std.vector(ROOT.std.vector("bool"))(512, ROOT.std.vector("bool")(512, False))
-                    this_mask=r['masks'][:,:,x]
+                    this_mask=r_center['masks'][:,:,x]
                     for idx in xrange(this_mask.shape[0]):
                         for idy in xrange(this_mask.shape[1]):
                             mask[idx][idy]=this_mask[idx][idy]
-                    rd.masks_plane2_2d.push_back(mask)
+                    rd.center_masks_plane2_2d.push_back(mask)
                     '''
+
+                    
+
+                    pixel2d_pix_v = pixel2d_pix_vv.at(plane)
+                    pixel2d_pix = pixel2d_pix_v.at(ix)
+                    
+                    pixel2d_int_v = pixel2d_int_vv.at(plane)
+                    pixel2d_int = pixel2d_int_v.at(ix)
+
+                    img_pix = larcv.cluster_to_image2d(pixel2d_pix,cfg.xdim,cfg.ydim)
+                    img_int = larcv.cluster_to_image2d(pixel2d_int,cfg.xdim,cfg.ydim)
+
+                    img_pix_arr = image_modify(img_pix, cfg)
+                    img_int_arr = image_modify(img_int, cfg)
+
+                    #Detection 2(pixel image )
+                    results_pix = model.detect([img_pix_arr], verbose=0)
+                    
+                    r_pix = results_pix[0]
+                
+                    for each in r_pix['scores']:
+                        rd.pix_scores_plane2.push_back(each)
+
+                    for each in r_pix['class_ids']:
+                        rd.pix_class_ids_plane2.push_back(class_names[each])
+                            
+                    for x in xrange(r_pix['rois'].shape[0]):
+                        roi_int=ROOT.std.vector("int")(4,0)
+                        roi_int.clear()
+                        for roi_int32 in r_pix['rois'][x]:
+                            roi_int.push_back(int(roi_int32))
+                        rd.pix_rois_plane2.push_back(roi_int)
+
+                    classes_np=r_pix['class_ids']
+                    # masks are too large, now only store needed values
+                    masks_np=np.zeros([r_pix['masks'].shape[-1], cfg.xdim*cfg.ydim])
+                    for x in xrange(r_pix['masks'].shape[-1]):
+                        this_mask=r_pix['masks'][:,:,x]
+                        this_mask=this_mask.flatten()
+                        masks_np[x] = this_mask
+                        '''
+                        mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
+                        for idx in xrange(cfg.xdim*cfg.ydim):
+                            mask[idx]=this_mask[idx]
+                        rd.pix_masks_plane2_1d.push_back(mask)
+                        '''
+
+                    idx=0
+                    for each_class in classes_np :
+                        pdg=class_names[each_class]
+                        if pdg==11:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.pix_electron_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.pix_electron_mask_dist.push_back(this_dist)
+                        elif pdg==13:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.pix_muon_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.pix_muon_mask_dist.push_back(this_dist)
+                        elif pdg==2212:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.pix_proton_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.pix_proton_mask_dist.push_back(this_dist)
+
+                        idx+=1
+
+                    #Detection 3(interaction)
+                    results_int = model.detect([img_int_arr], verbose=0)
+                    
+                    r_int = results_int[0]
+                
+                    for each in r_int['scores']:
+                        rd.int_scores_plane2.push_back(each)
+
+                    for each in r_int['class_ids']:
+                        rd.int_class_ids_plane2.push_back(class_names[each])
+                            
+                    for x in xrange(r_int['rois'].shape[0]):
+                        roi_int=ROOT.std.vector("int")(4,0)
+                        roi_int.clear()
+                        for roi_int32 in r_int['rois'][x]:
+                            roi_int.push_back(int(roi_int32))
+                        rd.int_rois_plane2.push_back(roi_int)
+
+                    classes_np=r_int['class_ids']
+                    # masks are too large, now only store needed values
+                    masks_np=np.zeros([r_int['masks'].shape[-1], cfg.xdim*cfg.ydim])
+                    for x in xrange(r_int['masks'].shape[-1]):
+                        this_mask=r_int['masks'][:,:,x]
+                        this_mask=this_mask.flatten()
+                        masks_np[x] = this_mask
+                        '''
+                        mask=ROOT.std.vector("bool")(cfg.xdim*cfg.ydim,False)
+                        for idx in xrange(cfg.xdim*cfg.ydim):
+                            mask[idx]=this_mask[idx]
+                        rd.int_masks_plane2_1d.push_back(mask)
+                        '''
+
+                    idx=0
+                    for each_class in classes_np :
+                        pdg=class_names[each_class]
+                        if pdg==11:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.int_electron_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.int_electron_mask_dist.push_back(this_dist)
+                        elif pdg==13:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.int_muon_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.int_muon_mask_dist.push_back(this_dist)
+                        elif pdg==2212:
+                            this_sum=np.sum(masks_np[idx])
+                            rd.int_proton_mask_sum.push_back(np.int(this_sum))
+                            this_dist=point_points_distances([256,256], np.nonzero(masks_np[idx].reshape(512,512)))
+                            rd.int_proton_mask_dist.push_back(this_dist)
+
+
+                        idx+=1
+                        
+                    import matplotlib.pyplot as plt
+
+                    fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
+                    visualize.display_instances(vertex_image_modified, r_center['rois'],
+                                                r_center['masks'], r_center['class_ids'],
+                                                class_names, r_center['scores'], ax=ax0,
+                                                title="center_Predictions")
+                    visualize.display_instances(img_pix_arr, r_pix['rois'],
+                                                r_pix['masks'], r_pix['class_ids'],
+                                                class_names, r_pix['scores'], ax=ax1,
+                                                title="pix_Predictions")
+                    visualize.display_instances(img_int_arr, r_int['rois'],
+                                                r_int['masks'], r_int['class_ids'],
+                                                class_names, r_int['scores'], ax=ax2,
+                                                title="int_Predictions")
+                    fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
+                    
+
+
             tree.Fill()
             rd.reset_vertex()
     tfile.cd()
