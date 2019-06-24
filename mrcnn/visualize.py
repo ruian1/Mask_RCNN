@@ -184,7 +184,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
         '''
-    #ax.imshow(masked_image.astype(np.uint8))
+    #ax.imshow(masked_image[:,:,0])
     ax.imshow(masked_image[:,:,0], origin="lower", cmap="jet")
     if auto_show:
         plt.show()
@@ -248,9 +248,9 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
         plt.title("{} ROIs".format(len(ids)))
 
     # Show area outside image boundaries.
-    ax.set_ylim(image.shape[0] + 20, -20)
-    ax.set_xlim(-50, image.shape[1] + 20)
-    ax.axis('off')
+    #ax.set_ylim(image.shape[0] + 20, -20)
+    #ax.set_xlim(-50, image.shape[1] + 20)
+    #ax.axis('off')
 
     for i, id in enumerate(ids):
         color = np.random.rand(3)
@@ -280,12 +280,13 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
                                   [:4].astype(np.int32), image.shape)
             masked_image = apply_mask(masked_image, m, color)
 
-    ax.imshow(masked_image)
+    ax.imshow(masked_image, origin="lower", cmap="jet")
+    #ax.imshow(masked_image, cmap="jet")
 
     # Print stats
     print("Positive ROIs: ", class_ids[class_ids > 0].shape[0])
     print("Negative ROIs: ", class_ids[class_ids == 0].shape[0])
-    print("Positive Ratio: {:.2f}".format(
+    print("Positive Ratio: {:.5f}".format(
         class_ids[class_ids > 0].shape[0] / class_ids.shape[0]))
 
 
@@ -384,7 +385,6 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                title="", ax=None):
     """Draw bounding boxes and segmentation masks with different
     customizations.
-
     boxes: [N, (y1, x1, y2, x2, class_id)] in image coordinates.
     refined_boxes: Like boxes, but draw with solid lines to show
         that they're the result of refining 'boxes'.
@@ -408,10 +408,11 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
 
     # Show area outside image boundaries.
     margin = image.shape[0] // 10
-    ax.set_ylim(image.shape[0] + margin, -margin)
-    ax.set_xlim(-margin, image.shape[1] + margin)
-    ax.axis('off')
-
+    #ax.set_ylim(image.shape[0] + margin, -margin)
+    #ax.set_xlim(-margin, image.shape[1] + margin)
+    #ax.axis('off')
+    ax.xaxis.set_ticks(np.arange(0, 512, 10))
+    ax.yaxis.set_ticks(np.arange(0, 512, 10))
     ax.set_title(title)
 
     masked_image = image.astype(np.uint32).copy()
@@ -479,9 +480,9 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                 p = Polygon(verts, facecolor="none", edgecolor=color)
                 ax.add_patch(p)
     if masked_image.shape[-1]==3:
-        ax.imshow(masked_image.astype(np.uint8))
+        ax.imshow(masked_image.astype(np.uint8), origin="lower", cmap="jet")
     if masked_image.shape[-1]==1:
-        ax.imshow(masked_image.reshape(512,512).astype(np.uint8))                
+        ax.imshow(masked_image.reshape(512,512).astype(np.uint8), origin="lower", cmap="jet")                
     #ax.imshow(masked_image.astype(np.uint8))
 
 
