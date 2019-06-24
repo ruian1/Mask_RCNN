@@ -61,7 +61,7 @@ class Config(object):
 
     # The strides of each layer of the FPN Pyramid. These values
     # are based on a Resnet101 backbone.
-    BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+    BACKBONE_STRIDES = [4, 8, 16, 32, 64, 128]
 
     # Size of the fully-connected layers in the classification graph
     FPN_CLASSIF_FC_LAYERS_SIZE = 1024
@@ -86,7 +86,9 @@ class Config(object):
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.7
+
+    # Rui to-do this is going to be decided also with mask NMS
+    RPN_NMS_THRESHOLD = 0.5 # was 0.7 
 
     # How many anchors per image to use for RPN training
     RPN_TRAIN_ANCHORS_PER_IMAGE = 256
@@ -138,8 +140,9 @@ class Config(object):
 
     # Image mean (RGB)
     #MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
-    MEAN_PIXEL = np.array([123.7])
-
+    #MEAN_PIXEL = np.array([123.7])
+    MEAN_PIXEL = np.array([0.0])
+    
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
     # enough positive proposals to fill this and keep a positive:negative
@@ -157,6 +160,7 @@ class Config(object):
     # Shape of output mask
     # To change this you also need to change the neural network mask branch
     MASK_SHAPE = [28, 28]
+    #MASK_SHAPE = [512,512]
 
     # Maximum number of ground truth instances to use in one image
     MAX_GT_INSTANCES = 100
@@ -164,6 +168,8 @@ class Config(object):
     # Bounding box refinement standard deviation for RPN and final detections.
     RPN_BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
     BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
+    #RPN_BBOX_STD_DEV = np.array([1.,1.,1.,1.])
+    #BBOX_STD_DEV = np.array([1.,1.,1.,1.])
 
     # Max number of final detections
     DETECTION_MAX_INSTANCES = 100
@@ -179,7 +185,7 @@ class Config(object):
     # The Mask RCNN paper uses lr=0.02, but on TensorFlow it causes
     # weights to explode. Likely due to differences in optimizer
     # implementation.
-    LEARNING_RATE = 0.02
+    LEARNING_RATE = 0.001
     LEARNING_MOMENTUM = 0.9
 
     # Weight decay regularization
