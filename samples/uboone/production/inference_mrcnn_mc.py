@@ -156,7 +156,7 @@ def main(INPUT_FILE,OUT_DIR,CFG):
     #Read MC data
     #
     dataset = MCNN_uboone.UbooneDataset(INPUT_FILE)
-    dataset.load_events(1990, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+    dataset.load_events(10, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
     dataset.prepare()
     
     #
@@ -221,6 +221,7 @@ def main(INPUT_FILE,OUT_DIR,CFG):
         fout.write(pr_bboxes_t)
         '''
         #detection
+        print image.shape
         results = model.detect([image], verbose=0)
         r = results[0]
                 
@@ -234,6 +235,8 @@ def main(INPUT_FILE,OUT_DIR,CFG):
         print 'r_sores'
         print r['scores']
         '''
+
+        print dataset.class_names
         reco_pdgs=[dataset.class_names[x]  for x in r['class_ids'] ]
         reco_bboxes=r['rois']
         reco_scores=r['scores']
@@ -242,7 +245,7 @@ def main(INPUT_FILE,OUT_DIR,CFG):
         reco_n_ga=reco_pdgs.count(22)
         reco_n_mu=reco_pdgs.count(13)
         reco_n_pi=reco_pdgs.count(211)
-        reco_n_pr=true_pdgs.count(2212)
+        reco_n_pr=reco_pdgs.count(2212)
         
         em_scores=[]
         ga_scores=[]

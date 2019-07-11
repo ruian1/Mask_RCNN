@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 import sys
 import os
+import logging
 import math
 import random
 import numpy as np
@@ -68,10 +69,6 @@ def compute_iou(box, boxes, box_area, boxes_area):
     efficiency. Calculate once in the caller to avoid duplicate work.
     """
     # Calculate intersection areas
-    #print 'box,',box.dtype
-    #print 'boxes,',boxes.dtype
-    #print 'box_area',box_area.dtype
-    #print 'boxes_area',boxes_area.dtype
     box.astype(float)
     boxes.astype(float)
     box_area.astype(float)
@@ -82,10 +79,8 @@ def compute_iou(box, boxes, box_area, boxes_area):
     x2 = np.minimum(box[3], boxes[:, 3])
     intersection = np.maximum(x2 - x1, 0) * np.maximum(y2 - y1, 0)
     union = box_area + boxes_area[:] - intersection[:]
-    #print 'in utils, intersection,',set(intersection.flatten())
-    #print 'in utils, union',set(union.flatten())
     iou = intersection / union
-    #print 'in utils, iou', set(iou.flatten())
+
     return iou
 
 
@@ -96,6 +91,7 @@ def compute_overlaps(boxes1, boxes2):
     For better performance, pass the largest set first and the smaller second.
     """
     # Areas of anchors and GT boxes
+
     area1 = (boxes1[:, 2] - boxes1[:, 0]) * (boxes1[:, 3] - boxes1[:, 1])
     area2 = (boxes2[:, 2] - boxes2[:, 0]) * (boxes2[:, 3] - boxes2[:, 1])
 
@@ -114,11 +110,9 @@ def compute_overlaps_masks(masks1, masks2):
     """
     
     # If either set of masks is empty return empty result
-    if masks1.shape[0] == 0 or masks2.shape[0] == 0:
-        return np.zeros((masks1.shape[0], masks2.shape[-1]))
+    if masks1.shape[-1] == 0 or masks2.shape[-1] == 0:
+        return np.zeros((masks1.shape[-1], masks2.shape[-1]))
     # flatten masks and compute their areas
-    #print masks1.shape
-    #print masks2.shape
 
     masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
     masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
@@ -272,7 +266,8 @@ class Dataset(object):
         # Background is always the first class
         self.class_info = [{"source": "", "id": 0, "name": 0}]
         self.source_class_ids = {}
-
+        self._empty_entries = []
+        
     def add_class(self, source, class_id, class_name):
         assert "." not in source, "Source name cannot contain a dot"
         # Does the class exist already?
@@ -286,6 +281,9 @@ class Dataset(object):
             "id": class_id,
             "name": class_name,
         })
+
+    def add_empty_entry(self, image_id):
+        self._empty_entries.append(image_id)
 
     def add_image(self, source, image_id, path, **kwargs):
         image_info = {
@@ -327,6 +325,10 @@ class Dataset(object):
         # Mapping from source class and image IDs to internal IDs
         self.class_from_source_map = {"{}.{}".format(info['source'], info['id']): id
                                       for info, id in zip(self.class_info, self.class_ids)}
+        print "self.image_ids.shaep, ",self.image_ids.shape
+        print "self.iamge_info size, ", len(self.image_info)
+        print "self._empty_entries size, ", len(self._empty_entries)
+                
         self.image_from_source_map = {"{}.{}".format(info['source'], info['id']): id
                                       for info, id in zip(self.image_info, self.image_ids)}
 
@@ -356,6 +358,9 @@ class Dataset(object):
         assert info['source'] == source
         return info['id']
 
+    @property
+    def empty_entries(self):
+        return self._empty_entries
     @property
     def image_ids(self):
         return self._image_ids
@@ -394,6 +399,7 @@ class Dataset(object):
         """
         # Override this function to load a mask from your dataset.
         # Otherwise, it returns an empty mask.
+        logging.warning("You are using the default load_mask(), maybe you need to define your own one.")
         mask = np.empty([0, 0, 0])
         class_ids = np.empty([0], np.int32)
         return mask, class_ids
@@ -593,6 +599,15 @@ def unmold_mask(mask, bbox, image_shape):
 #  Anchors
 ############################################################
 
+
+def confine_anchors(input_array):
+    idx = 0
+    for each in input_array:
+        if each < 0   : input_array[idx] = 0
+        if each > 512 : input_array[idx] = 512
+        idx +=1
+    return input_array
+
 def generate_anchors(scales, ratios, shape, feature_stride, anchor_stride):
     """
     scales: 1D array of anchor sizes in pixels. Example: [32, 64, 128]
@@ -612,6 +627,9 @@ def generate_anchors(scales, ratios, shape, feature_stride, anchor_stride):
     heights = scales / np.sqrt(ratios)
     widths = scales * np.sqrt(ratios)
 
+    heights = confine_anchors(heights)
+    widths = confine_anchors(widths)
+        
     # Enumerate shifts in feature space
     shifts_y = np.arange(0, shape[0], anchor_stride) * feature_stride
     shifts_x = np.arange(0, shape[1], anchor_stride) * feature_stride
@@ -709,7 +727,7 @@ def compute_matches(gt_boxes, gt_class_ids, gt_masks,
         # 3. Find the match
         for j in sorted_ixs:
             # If ground truth box is already matched, go to next one
-            if gt_match[j] > 0:
+            if gt_match[j] > -1:
                 continue
             # If we reach IoU smaller than the threshold, end the loop
             iou = overlaps[i, j]
