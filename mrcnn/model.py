@@ -1230,7 +1230,6 @@ def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
 
     # Compute binary cross entropy. If no positive ROIs, then return 0.
     # shape: [batch, roi, num_classes]
-
     '''
     # Default mask loss
     loss = K.switch(tf.size(y_true) > 0,
@@ -1242,7 +1241,7 @@ def mrcnn_mask_loss_graph(target_masks, target_class_ids, pred_masks):
                     weighted_mask_loss(K.binary_crossentropy(target=y_true, output=y_pred), y_true), 
                     tf.constant(0.0))
 
-    
+
     loss = K.mean(loss)
     return loss
 
