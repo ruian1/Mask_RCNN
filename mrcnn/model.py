@@ -2225,7 +2225,7 @@ class MaskRCNN():
         layers = keras_model.inner_model.layers if hasattr(keras_model, "inner_model")\
             else keras_model.layers
 
-        print layers
+        #print layers
         
         # Exclude some layers
         if exclude:

@@ -23,35 +23,41 @@ class ROOTData(object):
         # To-do, write sparse matrix, also needs changes in larcv
         #self.masks_plane2_1d  = ROOT.std.vector(ROOT.std.vector("bool"))(3, ROOT.std.vector("bool")(262144, kINVALID_BOOL))
 
-        self.center_scores_plane2    = ROOT.std.vector("float")(3,kINVALID_FLOAT)
-        self.center_class_ids_plane2 = ROOT.std.vector("int")(3,kINVALID_INT)
-        self.center_rois_plane2      = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
-        self.center_electron_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.center_muon_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.center_proton_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.center_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
+        self.center_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
+        self.center_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        self.center_electron_mask_sum  = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.center_muon_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.center_proton_mask_sum    = ROOT.std.vector("int")(3, kINVALID_INT)
         self.center_electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.center_muon_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.center_proton_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_muon_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_proton_mask_dist   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
 
-        self.pix_scores_plane2    = ROOT.std.vector("float")(3,kINVALID_FLOAT)
-        self.pix_class_ids_plane2 = ROOT.std.vector("int")(3,kINVALID_INT)
-        self.pix_rois_plane2      = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
-        self.pix_electron_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.pix_muon_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.pix_proton_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.pix_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
+        self.pix_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
+        self.pix_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        self.pix_electron_mask_sum  = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.pix_muon_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.pix_proton_mask_sum    = ROOT.std.vector("int")(3, kINVALID_INT)
         self.pix_electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.pix_muon_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.pix_proton_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.pix_muon_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.pix_proton_mask_dist   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
 
-        self.int_scores_plane2    = ROOT.std.vector("float")(3,kINVALID_FLOAT)
-        self.int_class_ids_plane2 = ROOT.std.vector("int")(3,kINVALID_INT)
-        self.int_rois_plane2      = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
-        self.int_electron_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.int_muon_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
-        self.int_proton_mask_sum = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.int_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
+        self.int_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
+        self.int_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        self.int_electron_mask_sum  = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.int_muon_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.int_proton_mask_sum    = ROOT.std.vector("int")(3, kINVALID_INT)
         self.int_electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.int_muon_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-        self.int_proton_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.int_muon_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.int_proton_mask_dist   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+
+        # Store trackid->pids for each track
+        self.mask_pids_array = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        # Stote best pid for each track
+        self.mask_pids = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        
         
     def reset_event(self):
         self.run[0]     = kINVALID_INT
@@ -65,6 +71,7 @@ class ROOTData(object):
         self.vtxid[0]   = kINVALID_INT
         self.inferred[0] = kINVALID_INT
 
+        # Vertex based analyze
         self.center_scores_plane2.clear()
         self.center_class_ids_plane2.clear()
         self.center_rois_plane2.clear()
@@ -95,6 +102,10 @@ class ROOTData(object):
         self.int_muon_mask_dist.clear()
         self.int_proton_mask_dist.clear()
 
+        # Mask-based analyze
+        self.mask_pids_array.clear()
+        self.mask_pids.clear()
+        
     def reset(self):
         self.reset_event()
         self.reset_vertex()
@@ -142,4 +153,7 @@ class ROOTData(object):
         tree.Branch("int_muon_mask_dist", self.int_muon_mask_dist)
         tree.Branch("int_proton_mask_dist", self.int_proton_mask_dist)
 
+        # Mask based analyze
+        tree.Branch("mask_pids_array", self.mask_pids_array)
+        tree.Branch("mask_pids", self.mask_pids)
         

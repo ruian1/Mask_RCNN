@@ -81,7 +81,7 @@ def nparray_modify(image_array, cfg):
 
 
 
-from MCNN_uboone import UbooneConfig
+from MCNN_uboone_updated_debug import UbooneConfig
 class InferenceConfig(UbooneConfig):
     #Run detection on one image at a time
     GPU_COUNT = 1
@@ -151,7 +151,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
     rd.reset()
 
 
-    import MCNN_uboone
+    import MCNN_uboone_updated_debug
 
     config = UbooneConfig()
 
@@ -175,7 +175,8 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
     iom.add_in_file(VTX_FILE)
     iom.initialize()
 
-    for entry in xrange(iom.get_n_entries()):
+    #for entry in xrange(iom.get_n_entries()):
+    for entry in xrange(1):
 
         iom.read_entry(entry)
 
@@ -185,8 +186,8 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
         ev_int = iom.get_data(larcv.kProductPixel2D,"inter_int_pixel")
         ev_img = iom.get_data(larcv.kProductImage2D,"wire")
         
-        #print '========================>>>>>>>>>>>>>>>>>>>>'
-        #print 'run, subrun, event',ev_pix.run(),ev_pix.subrun(),ev_pix.event()
+        print '========================>>>>>>>>>>>>>>>>>>>>'
+        print 'run, subrun, event',ev_pix.run(),ev_pix.subrun(),ev_pix.event()
 
         rd.run[0]    = int(ev_pix.run())
         rd.subrun[0] = int(ev_pix.subrun())
@@ -280,6 +281,7 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                     classes_np=r_center['class_ids']
                     # masks are too large, now only store needed values
                     masks_np=np.zeros([r_center['masks'].shape[-1], cfg.xdim*cfg.ydim])
+
                     for x in xrange(r_center['masks'].shape[-1]):
                         this_mask=r_center['masks'][:,:,x]
                         this_mask=this_mask.flatten()
@@ -290,7 +292,6 @@ def main(IMAGE_FILE,VTX_FILE,OUT_DIR,CFG):
                             mask[idx]=this_mask[idx]
                         rd.center_masks_plane2_1d.push_back(mask)
                         '''
-
                     idx=0
                     for each_class in classes_np :
                         pdg=class_names[each_class]
