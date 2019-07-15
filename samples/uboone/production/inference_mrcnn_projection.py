@@ -145,8 +145,11 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
         track_v = track_chain.track_trackReco_branch
         ass_chain.GetEntry(entry)
         ass_v = ass_chain.ass_trackReco_branch
-        if ass_v.size():
-            vertex_track_ass = ass_v.association(vertex_v.id(), track_v.id())
+        # Skip if there is no reconstructed tracks
+        if not ass_v.size():
+            print "Skipping...No reconstructed tracks..."
+            continue
+        vertex_track_ass = ass_v.association(vertex_v.id(), track_v.id())
         assert ev_img.run()==ass_v.run()
         assert ev_img.subrun()==ass_v.subrun()
         assert ev_img.event()==ass_v.event_id()
