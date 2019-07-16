@@ -259,11 +259,11 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                         projected_track[:,0]=x_
                         projected_track[:,1]=y_
                         projected_tracks[np.int(track_idx)] = projected_track
-                    '''
+                    
                     fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
                     ax2.set_xlim(0, 512)
                     ax2.set_ylim(0, 512)
-                    '''
+                    
                     projected_track_contours = {}
                     
                     for track_id, track in projected_tracks.iteritems():
@@ -277,7 +277,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                         
                         for contour in contours:
                             verts = contour[:,0,:]
-                            #ax2.plot(verts[:,0], verts[:,1], "*", markersize=2)
+                            ax2.plot(verts[:,0], verts[:,1], "*", markersize=2)
 
                     #Detection-1, for image with vectex centered
                     #from datetime import datetime
@@ -294,11 +294,11 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                     r_center = results_center[0]
                     r_center_nocosmic = results_center_nocosmic[0]
 
-                    ma.Vertex_based_analyze(rd, "center", r_center, vtx_x_2d, vtx_y_2d)
+                    ma.Vertex_based_analyze(rd, "center", r_center, new_y_2d, new_x_2d)
                     ma.Mask_based_analyze(  rd, "center", r_center, projected_track_contours)
 
                     rd.inferred[0] = 1
-                    '''
+
                     visualize.display_instances(vertex_image_modified, r_center['rois'],
                                                 r_center['masks'], r_center['class_ids'],
                                                 class_names, r_center['scores'], ax=ax0,
@@ -310,7 +310,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                                                 title="center_Predictions")
 
                     fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
-                    '''                    
+
 
             tree.Fill()
             rd.reset_vertex()
