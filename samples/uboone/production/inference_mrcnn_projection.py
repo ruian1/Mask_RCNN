@@ -117,6 +117,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
 
 
     for entry in xrange(iom.get_n_entries()):
+    #for entry in xrange(51,52):
     #entry = 0
     #while (entry < iom.get_n_entries()):
      
@@ -181,9 +182,9 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                     whole_img = ev_img.at(plane)
                     meta=pgraph.ParticleArray().front().BB()
                     
-                    x_2d, y_2d = u.Project3Dto2D_and_fliplr(whole_img.meta(), x, y, z, plane, x_2d, y_2d)
-                    new_y_2d, new_x_2d = u.Meta_origin_helper(x_2d, y_2d, get_new_origin=1)
-                    vtx_x_2d, vtx_y_2d = x_2d, y_2d
+                    x_2d, y_2d = u.Project3Dto2D_and_fliplr(whole_img.meta(), x, y, z, plane, x_2d, y_2d) # vertex pt
+                    new_y_2d, new_x_2d = u.Meta_origin_helper(x_2d, y_2d, get_new_origin=1) # x, y 2d pts on the cropped image
+                    vtx_x_2d, vtx_y_2d = x_2d, y_2d 
                     
                     meta_crop = larcv.ImageMeta(512,512*6,512,512,0,8448,plane)
                     meta_origin_x, meta_origin_y = u.Meta_origin_helper(x_2d, y_2d, verbose=0)
@@ -263,9 +264,9 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                         projected_track[:,1]=y_
                         projected_tracks[np.int(track_idx)] = projected_track
                     
-                    fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
-                    ax2.set_xlim(0, 512)
-                    ax2.set_ylim(0, 512)
+                    #fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
+                    #ax2.set_xlim(0, 512)
+                    #ax2.set_ylim(0, 512)
                     
                     projected_track_contours = {}
                     
@@ -277,11 +278,11 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                         img, contours, hierarchy = u.Find_contours(vertex_image_zeros)
 
                         projected_track_contours[np.int(track_id)] = contours
-                        
+                        '''
                         for contour in contours:
                             verts = contour[:,0,:]
                             ax2.plot(verts[:,0], verts[:,1], "*", markersize=2)
-
+                        '''
                     #Detection-1, for image with vectex centered
                     #from datetime import datetime
                     #a = datetime.now()
@@ -302,6 +303,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
 
                     rd.inferred[0] = 1
 
+                    '''
                     visualize.display_instances(vertex_image_modified, r_center['rois'],
                                                 r_center['masks'], r_center['class_ids'],
                                                 class_names, r_center['scores'], ax=ax0,
@@ -312,8 +314,11 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                                                 class_names, r_center_nocosmic['scores'], ax=ax1,
                                                 title="center_Predictions")
 
+                    print "x,y, ", new_y_2d, new_x_2d
+                    ax2.plot(new_y_2d, new_x_2d,'*', markersize = 15, color = 'magenta')
+                    
                     fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
-
+                    '''
 
             tree.Fill()
             rd.reset_vertex()
