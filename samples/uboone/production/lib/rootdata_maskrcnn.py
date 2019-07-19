@@ -26,13 +26,22 @@ class ROOTData(object):
         self.center_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.center_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
         self.center_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+
         self.center_electron_mask_sum  = ROOT.std.vector("int")(3, kINVALID_INT)
         self.center_muon_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
         self.center_proton_mask_sum    = ROOT.std.vector("int")(3, kINVALID_INT)
+        self.center_pion_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
+
         self.center_electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.center_muon_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.center_proton_mask_dist   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_pion_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
 
+        self.center_electron_mask_dist_simple = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_muon_mask_dist_simple     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_proton_mask_dist_simple   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        self.center_pion_mask_dist_simple     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+        '''
         self.pix_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.pix_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
         self.pix_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
@@ -52,7 +61,7 @@ class ROOTData(object):
         self.int_electron_mask_dist = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.int_muon_mask_dist     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.int_proton_mask_dist   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
-
+        '''
         # Store trackid->pids for each track
         self.mask_pids_array = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
         # Stote best pid for each track
@@ -75,13 +84,22 @@ class ROOTData(object):
         self.center_scores_plane2.clear()
         self.center_class_ids_plane2.clear()
         self.center_rois_plane2.clear()
+
         self.center_electron_mask_sum.clear()
         self.center_muon_mask_sum.clear()
         self.center_proton_mask_sum.clear()
+        self.center_pion_mask_sum.clear()
+
         self.center_electron_mask_dist.clear()
         self.center_muon_mask_dist.clear()
         self.center_proton_mask_dist.clear()
+        self.center_pion_mask_dist.clear()
 
+        self.center_electron_mask_dist_simple.clear()
+        self.center_muon_mask_dist_simple.clear()
+        self.center_proton_mask_dist_simple.clear()
+        self.center_pion_mask_dist_simple.clear()
+        '''
         self.pix_scores_plane2.clear()
         self.pix_class_ids_plane2.clear()
         self.pix_rois_plane2.clear()        
@@ -101,7 +119,7 @@ class ROOTData(object):
         self.int_electron_mask_dist.clear()
         self.int_muon_mask_dist.clear()
         self.int_proton_mask_dist.clear()
-
+        '''
         # Mask-based analyze
         self.mask_pids_array.clear()
         self.mask_pids.clear()
@@ -126,13 +144,22 @@ class ROOTData(object):
         tree.Branch("center_scores_plane2", self.center_scores_plane2)
         tree.Branch("center_class_ids_plane2", self.center_class_ids_plane2)
         tree.Branch("center_rois_plane2", self.center_rois_plane2)
+
         tree.Branch("center_electron_mask_sum", self.center_electron_mask_sum)
         tree.Branch("center_muon_mask_sum", self.center_muon_mask_sum)
         tree.Branch("center_proton_mask_sum", self.center_proton_mask_sum)
+        tree.Branch("center_pion_mask_sum", self.center_pion_mask_sum)
+
         tree.Branch("center_electron_mask_dist", self.center_electron_mask_dist)
         tree.Branch("center_muon_mask_dist", self.center_muon_mask_dist)
         tree.Branch("center_proton_mask_dist", self.center_proton_mask_dist)
+        tree.Branch("center_pion_mask_dist", self.center_pion_mask_dist)
 
+        tree.Branch("center_electron_mask_dist_simple", self.center_electron_mask_dist_simple)
+        tree.Branch("center_muon_mask_dist_simple", self.center_muon_mask_dist_simple)
+        tree.Branch("center_proton_mask_dist_simple", self.center_proton_mask_dist_simple)
+        tree.Branch("center_pion_mask_dist_simple", self.center_pion_mask_dist_simple)
+        '''
         tree.Branch("pix_scores_plane2", self.pix_scores_plane2)
         tree.Branch("pix_class_ids_plane2", self.pix_class_ids_plane2)
         tree.Branch("pix_rois_plane2", self.pix_rois_plane2)
@@ -152,7 +179,7 @@ class ROOTData(object):
         tree.Branch("int_electron_mask_dist", self.int_electron_mask_dist)
         tree.Branch("int_muon_mask_dist", self.int_muon_mask_dist)
         tree.Branch("int_proton_mask_dist", self.int_proton_mask_dist)
-
+        '''
         # Mask based analyze
         tree.Branch("mask_pids_array", self.mask_pids_array)
         tree.Branch("mask_pids", self.mask_pids)

@@ -117,7 +117,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
 
 
     for entry in xrange(iom.get_n_entries()):
-    #for entry in xrange(51,52):
+    #for entry in xrange(1):
     #entry = 0
     #while (entry < iom.get_n_entries()):
      
@@ -264,7 +264,7 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                         projected_track[:,1]=y_
                         projected_tracks[np.int(track_idx)] = projected_track
                     
-                    #fig,(ax0, ax1, ax2)=plt.subplots(1,3,figsize=(21,7))
+                    #fig,(ax0, ax1)=plt.subplots(1,2,figsize=(16,7))
                     #ax2.set_xlim(0, 512)
                     #ax2.set_ylim(0, 512)
                     
@@ -298,8 +298,8 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                     r_center = results_center[0]
                     r_center_nocosmic = results_center_nocosmic[0]
 
-                    ma.Vertex_based_analyze(rd, "center", r_center, new_y_2d, new_x_2d)
-                    ma.Mask_based_analyze(  rd, "center", r_center, projected_track_contours)
+                    ma.Vertex_based_analyze(rd, "center", r_center_nocosmic, new_y_2d, new_x_2d)
+                    ma.Mask_based_analyze(  rd, "center", r_center_nocosmic, projected_track_contours)
 
                     rd.inferred[0] = 1
 
@@ -314,9 +314,8 @@ def main(IMAGE_FILE, VTX_FILE, TRACK_FILE, OUT_DIR, CFG):
                                                 class_names, r_center_nocosmic['scores'], ax=ax1,
                                                 title="center_Predictions")
 
-                    print "x,y, ", new_y_2d, new_x_2d
-                    ax2.plot(new_y_2d, new_x_2d,'*', markersize = 15, color = 'magenta')
-                    
+                    ax0.plot(new_y_2d, new_x_2d,'*', markersize = 5, color = 'magenta')
+                    ax1.plot(new_y_2d, new_x_2d,'*', markersize = 15, color = 'magenta')
                     fig.savefig("%i_%i_%i_%i.pdf"%(ev_pix.run(),ev_pix.subrun(),ev_pix.event(),ix), bbox_inches='tight')
                     '''
 

@@ -31,12 +31,24 @@ def Merge_bbs(bbs):
     r=max([bb[3] for bb in bbs])
     return [b,l,t,r]
 
-def Point_points_distances(point, points):
+def Point_points_distances(point, points, mode = None, xyswap = False):
     points_x=points[0]
     points_y=points[1]
     point_x=point[0]
     point_y=point[1]
-    distances=[((point_y-points_y[idx])**2+(point_x-points_x[idx])**2)**0.5 for idx in xrange(len(points_x))]
-    if (len(distances)==0) : return -200
-    return min(np.array(distances))
 
+    if xyswap:
+        #print "swapping x and y"
+        point_x=point[1]
+        point_y=point[0]
+    distances=[((point_y-points_y[idx])**2+(point_x-points_x[idx])**2)**0.5 for idx in xrange(len(points_x))]
+    if (len(distances)==0) : return -999
+
+    # default mode 0 : return min distance between a point and points
+    # mode 1 : return the farthest pt in points
+    if not mode or mode == 0:
+        return min(np.array(distances))
+    if mode == 1:
+        max_index = np.argmax(distances)
+        return [points_x[max_index], points_y[max_index]]
+    

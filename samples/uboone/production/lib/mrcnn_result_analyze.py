@@ -1,6 +1,7 @@
 import ROOT
 import numpy as np
 import bbox_helper as bh
+import point_helper as ph
 import cv2
 
 class_names=[0, 11, 22, 13, 211, 2212, 2213]
@@ -24,7 +25,7 @@ def Mrcnn_clasid_2_output_classid(mrcnn_classid):
         return 3
 
 #def Mask_based_analyze (name, mrcnn_result, projected_tracks_contours):
-def Mask_based_analyze ( rd, name, mrcnn_result, projected_tracks_contours):
+def Mask_based_analyze ( rd, branch_name, mrcnn_result, projected_tracks_contours):
     if not len(projected_tracks_contours):
         return True
 
@@ -77,14 +78,14 @@ def Mask_based_analyze ( rd, name, mrcnn_result, projected_tracks_contours):
             rd.mask_pids.push_back(-1)
     #return track_pid_arrays
                             
-def Vertex_based_analyze (rd, name, mrcnn_result, x_2d, y_2d):
+def Vertex_based_analyze (rd, branch_name, mrcnn_result, x_2d, y_2d, verbose = 0):
 
     for each in mrcnn_result['scores']:
-        rd_scores_plane2 = getattr(rd, '%s_scores_plane2'%name)
+        rd_scores_plane2 = getattr(rd, '%s_scores_plane2'%branch_name)
         rd_scores_plane2.push_back(each)
         
     for each in mrcnn_result['class_ids']:
-        rd_class_ids_plane2 = getattr(rd, '%s_class_ids_plane2'%name)
+        rd_class_ids_plane2 = getattr(rd, '%s_class_ids_plane2'%branch_name)
         rd_class_ids_plane2.push_back(class_names[each])
         #rd.center_class_ids_plane2.push_back(class_names[each])
     
@@ -94,7 +95,7 @@ def Vertex_based_analyze (rd, name, mrcnn_result, x_2d, y_2d):
         for roi_int32 in mrcnn_result['rois'][x]:
             roi_int.push_back(int(roi_int32))
 
-        rd_rois_plane2 = getattr(rd, '%s_rois_plane2'%name)
+        rd_rois_plane2 = getattr(rd, '%s_rois_plane2'%branch_name)
         rd_rois_plane2.push_back(roi_int)
         #rd.center_rois_plane2.push_back(roi_int)
 
@@ -106,48 +107,52 @@ def Vertex_based_analyze (rd, name, mrcnn_result, x_2d, y_2d):
         this_mask=mrcnn_result['masks'][:,:,x]
         this_mask=this_mask.flatten()
         masks_np[x] = this_mask
-
         
     idx=0
+    particle_names = {11:"electron", 13:"muon", 2212:"proton", 211:"pion"}
     for each_class in classes_np :
         pdg=class_names[each_class]
-        if pdg==11:
-            this_sum=np.sum(masks_np[idx])
-            rd_electron_mask_sum = getattr(rd, '%s_electron_mask_sum'%name)
-            rd_electron_mask_sum.push_back(np.int(this_sum))
-            #rd.center_electron_mask_sum.push_back(np.int(this_sum))
-
-            this_dist=bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)))
-
-            rd_electron_mask_dist = getattr(rd, '%s_electron_mask_dist'%name)
-            rd_electron_mask_dist.push_back(np.int(this_dist))
-            #rd.center_electron_mask_dist.push_back(this_dist)
-
-        elif pdg==13:
-            this_sum=np.sum(masks_np[idx])
-            
-            rd_muon_mask_sum = getattr(rd, '%s_muon_mask_sum'%name)
-            rd_muon_mask_sum.push_back(np.int(this_sum))
-
-            #rd.center_muon_mask_sum.push_back(np.int(this_sum))
-            this_dist=bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)))
-            rd_muon_mask_dist = getattr(rd, '%s_muon_mask_dist'%name)
-            rd_muon_mask_dist.push_back(np.int(this_dist))
-            #rd.center_muon_mask_dist.push_back(this_dist)
-
-        elif pdg==2212:
-            this_sum=np.sum(masks_np[idx])
-
-            rd_proton_mask_sum = getattr(rd, '%s_proton_mask_sum'%name)
-            rd_proton_mask_sum.push_back(np.int(this_sum))
-            #rd.center_proton_mask_sum.push_back(np.int(this_sum))
-            this_dist=bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)))
-            rd_proton_mask_dist = getattr(rd, '%s_proton_mask_dist'%name)
-            rd_proton_mask_dist.push_back(np.int(this_dist))
-            #rd.center_proton_mask_dist.push_back(this_dist)
+        if(verbose): print "================"
+        if(verbose): print "pdg, ", pdg
+        Calculate_mask_and_dist (masks_np, idx, rd, branch_name, particle_names[pdg], x_2d, y_2d)
 
         idx+=1
-            
 
-                    
+def Calculate_mask_and_dist (masks_np, idx, rd, branch_name, particle_name, x_2d, y_2d, verbose = 0):
+    this_sum=np.sum(masks_np[idx])
 
+    rd_particle_mask_sum = getattr(rd, '%s_%s_mask_sum'%(branch_name, particle_name))
+    rd_particle_mask_sum.push_back(np.int(this_sum))
+    
+    rd_particle_mask_dist = getattr(rd, '%s_%s_mask_dist'%(branch_name, particle_name))
+    rd_particle_mask_dist_simple = getattr(rd, '%s_%s_mask_dist_simple'%(branch_name, particle_name))
+
+    
+    this_dist=bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)), xyswap = 1)    
+    rd_particle_mask_dist_simple.push_back(this_dist)
+    if(verbose): print "vtx 2d is ", x_2d, y_2d
+    if(verbose): print "min pt to pts dist is ", this_dist
+    
+    if(verbose): print "the pt is ", bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)), mode=1, xyswap = 1)
+    # farthest pt to vertex
+    
+    farthest_pt = bh.Point_points_distances([x_2d, y_2d], np.nonzero(masks_np[idx].reshape(512,512)), mode=1, xyswap = 1)
+    if farthest_pt == -999:
+        rd_particle_mask_dist.push_back(np.int(farthest_pt))
+        return
+        
+    # the farthest pt to farthest pt to vertex
+    farthest_pt_other = bh.Point_points_distances(farthest_pt, np.nonzero(masks_np[idx].reshape(512,512)), mode=1)
+    # return the smaller one between two farthest points
+    min_dist = min(ph.Dist_pt_to_pt(np.array([y_2d, x_2d]), farthest_pt),
+                   ph.Dist_pt_to_pt(np.array([y_2d, x_2d]), farthest_pt_other))
+    if(verbose): print "    farthest pt is,", farthest_pt
+    if(verbose): print "2dn farthest pt is,", farthest_pt_other
+    
+    if(verbose): print "new closest dist is ", min_dist
+    
+    rd_particle_mask_dist.push_back(np.int(min_dist))
+
+
+    
+    
