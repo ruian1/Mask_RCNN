@@ -94,11 +94,31 @@ def Vertex_based_analyze (rd, branch_name, mrcnn_result, x_2d, y_2d, verbose = 0
         roi_int.clear()
         for roi_int32 in mrcnn_result['rois'][x]:
             roi_int.push_back(int(roi_int32))
-
+            
         rd_rois_plane2 = getattr(rd, '%s_rois_plane2'%branch_name)
         rd_rois_plane2.push_back(roi_int)
         #rd.center_rois_plane2.push_back(roi_int)
 
+
+    for x in xrange(mrcnn_result['masks'].shape[-1]):
+        mask_int_x=ROOT.std.vector("int")(0,0)
+        mask_int_y=ROOT.std.vector("int")(0,0)
+        
+        mask_int_x.clear()
+        mask_int_y.clear()
+
+        mask_int32 = mrcnn_result['masks'][:, :, x]
+        for x in xrange(512):
+            for y in xrange(512):
+                if( mask_int32[x][y]):
+                    mask_int_x.push_back(y)
+                    mask_int_y.push_back(x)
+
+        rd_masks_plane2_x = getattr(rd, '%s_masks_plane2_x'%branch_name)
+        rd_masks_plane2_y = getattr(rd, '%s_masks_plane2_y'%branch_name)
+        rd_masks_plane2_x.push_back(mask_int_x)
+        rd_masks_plane2_y.push_back(mask_int_y)
+        
     classes_np=mrcnn_result['class_ids']
     # masks are too large, now only store needed values
     masks_np=np.zeros([mrcnn_result['masks'].shape[-1], 512 * 512])

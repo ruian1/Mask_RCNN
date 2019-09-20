@@ -26,6 +26,8 @@ class ROOTData(object):
         self.center_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.center_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
         self.center_rois_plane2        = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        self.center_masks_plane2_x     = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
+        self.center_masks_plane2_y     = ROOT.std.vector(ROOT.std.vector("int"))(3, ROOT.std.vector("int")(4, kINVALID_INT))
 
         self.center_electron_mask_sum  = ROOT.std.vector("int")(3, kINVALID_INT)
         self.center_muon_mask_sum      = ROOT.std.vector("int")(3, kINVALID_INT)
@@ -41,6 +43,9 @@ class ROOTData(object):
         self.center_muon_mask_dist_simple     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.center_proton_mask_dist_simple   = ROOT.std.vector("float")(3, kINVALID_FLOAT)
         self.center_pion_mask_dist_simple     = ROOT.std.vector("float")(3, kINVALID_FLOAT)
+
+        
+
         '''
         self.pix_scores_plane2      = ROOT.std.vector("float")(3,kINVALID_FLOAT)
         self.pix_class_ids_plane2   = ROOT.std.vector("int")(3,kINVALID_INT)
@@ -84,6 +89,8 @@ class ROOTData(object):
         self.center_scores_plane2.clear()
         self.center_class_ids_plane2.clear()
         self.center_rois_plane2.clear()
+        self.center_masks_plane2_x.clear()
+        self.center_masks_plane2_y.clear()
 
         self.center_electron_mask_sum.clear()
         self.center_muon_mask_sum.clear()
@@ -144,6 +151,9 @@ class ROOTData(object):
         tree.Branch("center_scores_plane2", self.center_scores_plane2)
         tree.Branch("center_class_ids_plane2", self.center_class_ids_plane2)
         tree.Branch("center_rois_plane2", self.center_rois_plane2)
+
+        tree.Branch("center_masks_plane2_x", self.center_masks_plane2_x)
+        tree.Branch("center_masks_plane2_y", self.center_masks_plane2_y)
 
         tree.Branch("center_electron_mask_sum", self.center_electron_mask_sum)
         tree.Branch("center_muon_mask_sum", self.center_muon_mask_sum)
